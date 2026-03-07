@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COCORO OS — AIエージェント登録</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060608; --surface: #0d0d12; --surface2: #13131c;
+  --border: rgba(255,255,255,0.07); --border-active: rgba(139,92,246,0.6);
+  --text: #e8e8f0; --muted: #6b6b80;
+  --accent: #8b5cf6; --accent2: #06b6d4; --accent3: #f472b6;
+  --error: #f87171; --success: #34d399; --req: #f472b6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+
+/* BG */
+.orb { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.13; pointer-events: none; z-index: 0; }
+.orb1 { width:600px;height:600px;background:var(--accent);top:-200px;left:-200px;animation:o1 20s ease-in-out infinite alternate; }
+.orb2 { width:500px;height:500px;background:var(--accent2);bottom:-150px;right:-150px;animation:o2 25s ease-in-out infinite alternate; }
+.orb3 { width:280px;height:280px;background:var(--accent3);top:50%;left:50%;transform:translate(-50%,-50%);animation:o3 15s ease-in-out infinite alternate; }
+@keyframes o1{to{transform:translate(80px,60px)}}
+@keyframes o2{to{transform:translate(-60px,-80px)}}
+@keyframes o3{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.5)}}
+.grid { position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(255,255,255,0.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.016) 1px,transparent 1px);background-size:60px 60px;pointer-events:none; }
+
+/* Layout */
+.wrap { position:relative;z-index:1;max-width:720px;margin:0 auto;padding:56px 20px 100px; }
+
+/* Header */
+.hdr { text-align:center;margin-bottom:52px; }
+.badge { display:inline-flex;align-items:center;gap:8px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.28);border-radius:100px;padding:6px 18px;margin-bottom:26px;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--accent); }
+.dot { width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
+.hdr h1 { font-family:'Space Grotesk',sans-serif;font-size:clamp(26px,5vw,42px);font-weight:700;letter-spacing:-0.02em;line-height:1.1; }
+.hdr h1 span { background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
+.hdr p { margin-top:12px;color:var(--muted);font-size:13px;max-width:400px;margin-left:auto;margin-right:auto; }
+
+/* Progress */
+.prog { display:flex;align-items:center;margin-bottom:48px;position:relative; }
+.prog::before { content:'';position:absolute;top:15px;left:15px;right:15px;height:1px;background:var(--border); }
+.pfill { position:absolute;top:15px;left:15px;height:1px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s cubic-bezier(.4,0,.2,1); }
+.pdot { flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative; }
+.pc { width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--muted);transition:all .3s;z-index:1; }
+.pdot.active .pc { border-color:var(--accent);background:rgba(139,92,246,0.15);color:var(--accent);box-shadow:0 0 18px rgba(139,92,246,0.35); }
+.pdot.done .pc { border-color:var(--success);background:rgba(52,211,153,0.1);color:var(--success); }
+.pl { font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap; }
+.pdot.active .pl { color:var(--accent); }
+.pdot.done .pl { color:var(--success); }
+
+/* Phase */
+.phase { display:none;animation:up .35s ease; }
+.phase.active { display:block; }
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.ph-num { font-size:10px;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:4px; }
+.ph-title { font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:600;margin-bottom:6px; }
+.ph-desc { color:var(--muted);font-size:12.5px;margin-bottom:28px; }
+
+/* Card */
+.card { background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:14px;transition:border-color .2s; }
+.card:hover { border-color:rgba(255,255,255,0.11); }
+
+/* Field */
+.f { margin-bottom:20px; }
+.f:last-child { margin-bottom:0; }
+.fl { display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:9px; }
+.fl .r { color:var(--req);font-size:13px;line-height:1; }
+input[type=text],input[type=date],input[type=email],input[type=url],textarea {
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none;
+}
+input:focus,textarea:focus { border-color:var(--border-active);box-shadow:0 0 0 3px rgba(139,92,246,0.1); }
+input::placeholder,textarea::placeholder { color:var(--muted); }
+.row2 { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+@media(max-width:520px){.row2{grid-template-columns:1fr;}}
+
+/* Auto tags */
+.auto-row { display:flex;flex-wrap:wrap;gap:6px;margin-top:10px; }
+.auto-tag { display:inline-flex;align-items:center;gap:4px;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);color:var(--accent2);border-radius:6px;padding:4px 10px;font-size:11.5px;transition:all .4s; }
+.auto-tag.empty { opacity:0.25; }
+.albl { font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px; }
+
+/* Choice cards */
+.choice-group { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }
+@media(max-width:520px){.choice-group{grid-template-columns:1fr;}}
+.ci { position:relative; }
+.ci input { position:absolute;opacity:0;width:0;height:0; }
+.cl { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12.5px;text-align:center;line-height:1.4;transition:all .2s;min-height:72px; }
+.cl:hover { border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.03); }
+.ci input:checked + .cl { border-color:var(--accent);background:rgba(139,92,246,0.12);color:var(--accent); }
+.ci input:checked + .cl .cem { border-color:var(--accent);background:var(--accent); }
+.cem { width:14px;height:14px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;transition:all .2s; }
+
+/* Blood type */
+.bt-group { display:grid;grid-template-columns:repeat(4,1fr);gap:10px; }
+.bti { position:relative; }
+.bti input { position:absolute;opacity:0;width:0;height:0; }
+.btl { display:block;padding:16px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:16px;font-weight:700;font-family:'Space Grotesk',sans-serif;text-align:center;transition:all .2s; }
+.bti input:checked + .btl { border-color:var(--accent);background:rgba(139,92,246,0.14);color:var(--accent);box-shadow:0 0 14px rgba(139,92,246,0.2); }
+.btl:hover { border-color:rgba(255,255,255,0.18); }
+
+/* Receptivity 4-stage */
+.recep-group { display:grid;grid-template-columns:repeat(4,1fr);gap:8px; }
+@media(max-width:520px){.recep-group{grid-template-columns:repeat(2,1fr);}}
+.ri { position:relative; }
+.ri input { position:absolute;opacity:0;width:0;height:0; }
+.rl { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:pointer;text-align:center;transition:all .2s; }
+.rl .rem { font-size:20px; }
+.rl .rt { font-size:11.5px;line-height:1.35; }
+.rl .rpct { font-size:10px;color:var(--muted);margin-top:2px; }
+.ri input:checked + .rl { border-color:var(--accent2);background:rgba(6,182,212,0.1); }
+.ri input:checked + .rl .rt,.ri input:checked + .rl .rpct { color:var(--accent2); }
+
+/* Q progress */
+.q-progress { display:flex;align-items:center;gap:10px;margin-bottom:20px; }
+.q-bar { flex:1;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden; }
+.q-fill { height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s ease;border-radius:2px; }
+.q-count { font-size:11px;color:var(--muted);white-space:nowrap; }
+.q-cat { font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:var(--accent);margin-bottom:8px; }
+.q-text { font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:500;line-height:1.4;margin-bottom:18px; }
+
+/* Nav */
+.nav { display:flex;gap:10px;justify-content:space-between;margin-top:28px; }
+.btn { padding:13px 28px;border-radius:10px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:13.5px;font-weight:500;transition:all .2s; }
+.ghost { background:transparent;border:1px solid var(--border);color:var(--muted); }
+.ghost:hover { border-color:rgba(255,255,255,0.2);color:var(--text); }
+.primary { background:linear-gradient(135deg,var(--accent),#6d28d9);color:#fff;box-shadow:0 4px 18px rgba(139,92,246,0.32); }
+.primary:hover { transform:translateY(-1px);box-shadow:0 8px 28px rgba(139,92,246,0.48); }
+.submit { background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;box-shadow:0 4px 18px rgba(6,182,212,0.3);padding:15px 44px;font-size:14.5px; }
+.submit:hover { transform:translateY(-2px);box-shadow:0 10px 36px rgba(6,182,212,0.5); }
+
+/* SNS */
+.sns-block { display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px; }
+.sns-block:last-child { margin-bottom:0; }
+.sns-ico { width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0; }
+.sns-name { font-weight:500;font-size:13px;margin-bottom:4px; }
+.sns-badge { margin-left:auto;font-size:10px;color:var(--accent2);background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2);border-radius:4px;padding:2px 8px;white-space:nowrap; }
+
+/* Notice */
+.notice { display:flex;gap:10px;padding:14px;border-radius:10px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18); }
+.ni { font-size:17px;flex-shrink:0; }
+.nt { font-size:12.5px;color:var(--muted);line-height:1.6; }
+.nt strong { color:var(--text); }
+
+/* Error */
+input.invalid { border-color:var(--error)!important; }
+.ferr { font-size:11px;color:var(--error);margin-top:4px;display:none; }
+.ferr.on { display:block; }
+
+/* Success */
+.succ { display:none;text-align:center;padding:80px 20px; }
+.succ.on { display:block;animation:up .5s ease; }
+.succ-icon { font-size:60px;margin-bottom:22px; }
+.succ-title { font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;margin-bottom:14px; }
+.succ-sub { color:var(--muted);font-size:14px;max-width:380px;margin:0 auto; }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+<div class="grid"></div>
+
+<div class="wrap">
+
+  <div class="hdr">
+    <div class="badge"><div class="dot"></div>COCORO OS — MINI PC</div>
+    <h1>あなたの<span>分身</span>を、<br>ここから起動する。</h1>
+    <p>AIエージェントがあなたの思考・価値観・感情パターンを学習し、デジタルの自分として機能します。</p>
+  </div>
+
+  <div class="prog" id="prog">
+    <div class="pfill" id="pfill" style="width:0%"></div>
+    <div class="pdot active"><div class="pc" id="pc1">1</div><div class="pl">基本情報</div></div>
+    <div class="pdot"><div class="pc" id="pc2">2</div><div class="pl">10問診断</div></div>
+    <div class="pdot"><div class="pc" id="pc3">3</div><div class="pl">エージェント</div></div>
+    <div class="pdot"><div class="pc" id="pc4">4</div><div class="pl">宿命属性</div></div>
+  </div>
+
+  <form id="form" novalidate>
+
+  <!-- ===== PHASE 1: 基本情報 ===== -->
+  <div class="phase active" id="p1">
+    <div class="ph-num">Phase 01 / 04</div>
+    <div class="ph-title">基本情報 — デジタル・スケルトン</div>
+    <div class="ph-desc">AIの「外殻」を構築します。<span style="color:var(--req)">★</span> は必須項目です。</div>
+
+    <div class="card">
+      <div class="f">
+        <div class="fl">氏名 <span class="r">★</span></div>
+        <input type="text" id="fullname" placeholder="山田 太郎">
+        <div class="ferr" id="e-name">氏名を入力してください</div>
+      </div>
+      <div class="f">
+        <div class="fl">AIに呼ばれたい名前 <span class="r">★</span></div>
+        <input type="text" id="nickname" placeholder="タロウ、Taro …">
+        <div class="ferr" id="e-nick">ニックネームを入力してください</div>
+      </div>
+      <div class="f">
+        <div class="fl">メールアドレス <span class="r">★</span></div>
+        <input type="email" id="email" placeholder="your@email.com">
+        <div class="ferr" id="e-email">有効なメールアドレスを入力してください</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="f">
+        <div class="fl">生年月日 <span class="r">★</span></div>
+        <input type="date" id="bdate">
+        <div class="ferr" id="e-bdate">生年月日を入力してください</div>
+        <div class="albl" style="margin-top:12px">自動推計（入力後に表示）</div>
+        <div class="auto-row">
+          <div class="auto-tag empty" id="tg-z">♈ 星座: —</div>
+          <div class="auto-tag empty" id="tg-e">🐉 干支: —</div>
+          <div class="auto-tag empty" id="tg-k">☯ 日干: —</div>
+          <div class="auto-tag empty" id="tg-s">✦ 星宿: —</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row2">
+        <div class="f">
+          <div class="fl">職業 / 役割 <span class="r">★</span></div>
+          <input type="text" id="job" placeholder="エンジニア、経営者 …">
+          <div class="ferr" id="e-job">職業を入力してください</div>
+        </div>
+        <div class="f">
+          <div class="fl">居住地 <span class="r">★</span></div>
+          <input type="text" id="loc" placeholder="東京都">
+          <div class="ferr" id="e-loc">居住地を入力してください</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav"><div></div><button type="button" class="btn primary" onclick="next(1)">次へ →</button></div>
+  </div>
+
+  <!-- ===== PHASE 2: 10問診断 ===== -->
+  <div class="phase" id="p2">
+    <div class="ph-num">Phase 02 / 04</div>
+    <div class="ph-title">10問診断 — 思考アルゴリズム</div>
+    <div class="ph-desc">あなたの判断軸・価値観をAIに学習させます。直感で選んでください。</div>
+
+    <div class="q-progress">
+      <div class="q-bar"><div class="q-fill" id="qfill" style="width:0%"></div></div>
+      <div class="q-count" id="qcount">0 / 10</div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">価値観 — Values</div>
+      <div class="q-text">品質とスピードが対立した場合、どちらを優先しますか？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q1" id="q1a" value="0"><label class="cl" for="q1a"><div class="cem"></div>品質<br><span style="font-size:11px;color:var(--muted)">確実性重視</span></label></div>
+        <div class="ci"><input type="radio" name="q1" id="q1b" value="1"><label class="cl" for="q1b"><div class="cem"></div>スピード<br><span style="font-size:11px;color:var(--muted)">効率性重視</span></label></div>
+        <div class="ci"><input type="radio" name="q1" id="q1c" value="2"><label class="cl" for="q1c"><div class="cem"></div>状況による</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">価値観 — Courage</div>
+      <div class="q-text">成功確率30%の大きな挑戦。取り組みますか？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q2" id="q2a" value="0"><label class="cl" for="q2a"><div class="cem"></div>取り組む<br><span style="font-size:11px;color:var(--muted)">挑戦重視</span></label></div>
+        <div class="ci"><input type="radio" name="q2" id="q2b" value="1"><label class="cl" for="q2b"><div class="cem"></div>見送る<br><span style="font-size:11px;color:var(--muted)">安全重視</span></label></div>
+        <div class="ci"><input type="radio" name="q2" id="q2c" value="2"><label class="cl" for="q2c"><div class="cem"></div>条件次第</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">リスク — Risk Tolerance</div>
+      <div class="q-text">80%の確信があれば意思決定しますか？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q3" id="q3a" value="0"><label class="cl" for="q3a"><div class="cem"></div>する</label></div>
+        <div class="ci"><input type="radio" name="q3" id="q3b" value="1"><label class="cl" for="q3b"><div class="cem"></div>しない<br><span style="font-size:11px;color:var(--muted)">95%必要</span></label></div>
+        <div class="ci"><input type="radio" name="q3" id="q3c" value="2"><label class="cl" for="q3c"><div class="cem"></div>領域による</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">倫理 — Honesty</div>
+      <div class="q-text">ルールと結果が矛盾する場合、どちらを優先しますか？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q4" id="q4a" value="0"><label class="cl" for="q4a"><div class="cem"></div>ルール<br><span style="font-size:11px;color:var(--muted)">原則重視</span></label></div>
+        <div class="ci"><input type="radio" name="q4" id="q4b" value="1"><label class="cl" for="q4b"><div class="cem"></div>結果<br><span style="font-size:11px;color:var(--muted)">実利重視</span></label></div>
+        <div class="ci"><input type="radio" name="q4" id="q4c" value="2"><label class="cl" for="q4c"><div class="cem"></div>ケースバイケース</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">思考 — Logic Style</div>
+      <div class="q-text">問題に直面した時、最初にすることは？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q5" id="q5a" value="0"><label class="cl" for="q5a"><div class="cem"></div>データを集める</label></div>
+        <div class="ci"><input type="radio" name="q5" id="q5b" value="1"><label class="cl" for="q5b"><div class="cem"></div>直感で仮説を立てる</label></div>
+        <div class="ci"><input type="radio" name="q5" id="q5c" value="2"><label class="cl" for="q5c"><div class="cem"></div>関係者に相談する</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">感情 — Empathy</div>
+      <div class="q-text">批判を受けた時の反応は？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q6" id="q6a" value="0"><label class="cl" for="q6a"><div class="cem"></div>客観的に<br>受け止め改善</label></div>
+        <div class="ci"><input type="radio" name="q6" id="q6b" value="1"><label class="cl" for="q6b"><div class="cem"></div>感情的に<br>反応する</label></div>
+        <div class="ci"><input type="radio" name="q6" id="q6c" value="2"><label class="cl" for="q6c"><div class="cem"></div>相手の意図を<br>考える</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">目標 — Growth</div>
+      <div class="q-text">目標達成のモチベーション源は？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q7" id="q7a" value="0"><label class="cl" for="q7a"><div class="cem"></div>自己成長</label></div>
+        <div class="ci"><input type="radio" name="q7" id="q7b" value="1"><label class="cl" for="q7b"><div class="cem"></div>経済的報酬</label></div>
+        <div class="ci"><input type="radio" name="q7" id="q7c" value="2"><label class="cl" for="q7c"><div class="cem"></div>社会的貢献</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">対話 — Communication</div>
+      <div class="q-text">重要なフィードバックの伝え方は？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q8" id="q8a" value="0"><label class="cl" for="q8a"><div class="cem"></div>直接的に伝える</label></div>
+        <div class="ci"><input type="radio" name="q8" id="q8b" value="1"><label class="cl" for="q8b"><div class="cem"></div>婉曲的に伝える</label></div>
+        <div class="ci"><input type="radio" name="q8" id="q8c" value="2"><label class="cl" for="q8c"><div class="cem"></div>質問形式で気づかせる</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">対話 — Honesty × Communication</div>
+      <div class="q-text">悪いニュースの伝え方は？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q9" id="q9a" value="0"><label class="cl" for="q9a"><div class="cem"></div>即座に正直に</label></div>
+        <div class="ci"><input type="radio" name="q9" id="q9b" value="1"><label class="cl" for="q9b"><div class="cem"></div>タイミングを選んで</label></div>
+        <div class="ci"><input type="radio" name="q9" id="q9c" value="2"><label class="cl" for="q9c"><div class="cem"></div>解決策と共に</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="q-cat">思考 — Logic × Curiosity</div>
+      <div class="q-text">データと直感が矛盾する場合は？</div>
+      <div class="choice-group">
+        <div class="ci"><input type="radio" name="q10" id="q10a" value="0"><label class="cl" for="q10a"><div class="cem"></div>データに従う</label></div>
+        <div class="ci"><input type="radio" name="q10" id="q10b" value="1"><label class="cl" for="q10b"><div class="cem"></div>直感に従う</label></div>
+        <div class="ci"><input type="radio" name="q10" id="q10c" value="2"><label class="cl" for="q10c"><div class="cem"></div>追加データを集める</label></div>
+      </div>
+    </div>
+
+    <div class="ferr" id="e-q" style="margin-top:8px;font-size:12px">全10問に回答してください</div>
+
+    <div class="nav">
+      <button type="button" class="btn ghost" onclick="prev(2)">← 戻る</button>
+      <button type="button" class="btn primary" onclick="next(2)">次へ →</button>
+    </div>
+  </div>
+
+  <!-- ===== PHASE 3: エージェント設定 ===== -->
+  <div class="phase" id="p3">
+    <div class="ph-num">Phase 03 / 04</div>
+    <div class="ph-title">エージェント設定 — 振る舞いの定義</div>
+    <div class="ph-desc">作成されたAIがどう振る舞うかを決めます。</div>
+
+    <div class="card">
+      <div class="f">
+        <div class="fl">対話トーン <span class="r">★</span></div>
+        <div class="choice-group">
+          <div class="ci"><input type="radio" name="tone" id="t1" value="丁寧"><label class="cl" for="t1"><div class="cem"></div>🎩 丁寧<br><span style="font-size:11px;color:var(--muted)">敬語</span></label></div>
+          <div class="ci"><input type="radio" name="tone" id="t2" value="フランク"><label class="cl" for="t2"><div class="cem"></div>😎 フランク<br><span style="font-size:11px;color:var(--muted)">親友</span></label></div>
+          <div class="ci"><input type="radio" name="tone" id="t3" value="メンター"><label class="cl" for="t3"><div class="cem"></div>🦅 メンター<br><span style="font-size:11px;color:var(--muted)">厳格</span></label></div>
+        </div>
+        <div class="ferr" id="e-tone">対話トーンを選択してください</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="f">
+        <div class="fl">情報の密度 <span class="r">★</span></div>
+        <div class="choice-group">
+          <div class="ci"><input type="radio" name="density" id="d1" value="1"><label class="cl" for="d1"><div class="cem"></div>結論のみ<br><span style="font-size:11px;color:var(--muted)">端的に</span></label></div>
+          <div class="ci"><input type="radio" name="density" id="d2" value="2"><label class="cl" for="d2"><div class="cem"></div>バランス<br><span style="font-size:11px;color:var(--muted)">要点＋補足</span></label></div>
+          <div class="ci"><input type="radio" name="density" id="d3" value="3"><label class="cl" for="d3"><div class="cem"></div>詳細に<br><span style="font-size:11px;color:var(--muted)">プロセスも</span></label></div>
+        </div>
+        <div class="ferr" id="e-den">選択してください</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="f">
+        <div class="fl">主要ミッション <span class="r">★</span></div>
+        <textarea id="mission" rows="4" placeholder="例：良き壁打ち相手として思考を整理する / タスク管理の鬼として締め切りを守らせる / 家族への優しいメッセンジャーとして橋渡しをする"></textarea>
+        <div class="ferr" id="e-mission">ミッションを入力してください</div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button type="button" class="btn ghost" onclick="prev(3)">← 戻る</button>
+      <button type="button" class="btn primary" onclick="next(3)">次へ →</button>
+    </div>
+  </div>
+
+  <!-- ===== PHASE 4: 宿命属性（最後） ===== -->
+  <div class="phase" id="p4">
+    <div class="ph-num">Phase 04 / 04</div>
+    <div class="ph-title">宿命属性 — 運命論的バイアス</div>
+    <div class="ph-desc">統計学・占術データをAIの人格形成に組み込みます。最後の仕上げです。</div>
+
+    <div class="card">
+      <div class="f">
+        <div class="fl">血液型 <span class="r">★</span></div>
+        <div class="bt-group">
+          <div class="bti"><input type="radio" name="blood" id="ba" value="A"><label class="btl" for="ba">A</label></div>
+          <div class="bti"><input type="radio" name="blood" id="bb" value="B"><label class="btl" for="bb">B</label></div>
+          <div class="bti"><input type="radio" name="blood" id="bo" value="O"><label class="btl" for="bo">O</label></div>
+          <div class="bti"><input type="radio" name="blood" id="bab" value="AB"><label class="btl" for="bab">AB</label></div>
+        </div>
+        <div class="ferr" id="e-blood">血液型を選択してください</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="f">
+        <div class="fl">占いへの受容度 <span class="r">★</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">あなたの性格が占いの結果にどの程度当てはまると感じますか？AIの重み付けに使用されます。</div>
+        <div class="recep-group">
+          <div class="ri"><input type="radio" name="recep" id="r1" value="25"><label class="rl" for="r1"><div class="rem">🤔</div><div class="rt">あまり<br>当てはまらない</div><div class="rpct">25%</div></label></div>
+          <div class="ri"><input type="radio" name="recep" id="r2" value="50"><label class="rl" for="r2"><div class="rem">🙂</div><div class="rt">少し<br>当てはまる</div><div class="rpct">50%</div></label></div>
+          <div class="ri"><input type="radio" name="recep" id="r3" value="75"><label class="rl" for="r3"><div class="rem">😲</div><div class="rt">かなり<br>当てはまる</div><div class="rpct">75%</div></label></div>
+          <div class="ri"><input type="radio" name="recep" id="r4" value="100"><label class="rl" for="r4"><div class="rem">🔥</div><div class="rt">ドンピシャ<br>だと思う</div><div class="rpct">100%</div></label></div>
+        </div>
+        <div class="ferr" id="e-recep">受容度を選択してください</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="albl" style="margin-bottom:12px">SNS連携 <span style="color:var(--accent2);font-weight:400;text-transform:none;letter-spacing:0;font-size:11px">後日設定可</span></div>
+      <div class="sns-block">
+        <div class="sns-ico" style="background:rgba(0,0,0,0.3)">𝕏</div>
+        <div style="flex:1;min-width:0"><div class="sns-name">X (Twitter)</div><input type="url" id="sx" placeholder="https://x.com/yourhandle"></div>
+        <div class="sns-badge">後日可</div>
+      </div>
+      <div class="sns-block">
+        <div class="sns-ico" style="background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)">📸</div>
+        <div style="flex:1;min-width:0"><div class="sns-name">Instagram</div><input type="url" id="sig" placeholder="https://instagram.com/yourhandle"></div>
+        <div class="sns-badge">後日可</div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:rgba(139,92,246,0.2)">
+      <div class="notice" style="margin-bottom:0">
+        <div class="ni">🔒</div>
+        <div class="nt"><strong>プライバシーポリシー</strong><br>入力情報はCOCORO OSのAI学習のみに使用します。第三者への提供・販売は行いません。SNSデータは明示的な連携操作がない限りアクセスされません。</div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button type="button" class="btn ghost" onclick="prev(4)">← 戻る</button>
+      <button type="button" class="btn submit" onclick="doSubmit(event)">✦ 分身を起動する</button>
+    </div>
+  </div>
+
+  </form>
+
+  <!-- Success -->
+  <div class="succ" id="succ">
+    <div class="succ-icon">✦</div>
+    <div class="succ-title">起動完了</div>
+    <p class="succ-sub">あなたのデジタル分身の学習が始まります。<br>24時間以内に確認メールをお送りします。</p>
+    <div style="margin-top:36px;color:var(--muted);font-size:11px;letter-spacing:.1em">COCORO OS — by ANTIGRAVITY</div>
+  </div>
+
+</div>
+
+<script>
+const TOTAL = 4;
+let cur = 1;
+
+function updateProg(n) {
+  for (let i = 1; i <= TOTAL; i++) {
+    const pc = document.getElementById('pc' + i);
+    const dot = pc.parentElement;
+    dot.classList.remove('active', 'done');
+    if (i < n) { dot.classList.add('done'); pc.textContent = '✓'; }
+    else if (i === n) { dot.classList.add('active'); }
+    else { pc.textContent = i; }
+  }
+  document.getElementById('pfill').style.width = ((n - 1) / (TOTAL - 1) * 100) + '%';
+}
+
+function show(n) {
+  document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
+  document.getElementById('p' + n).classList.add('active');
+  cur = n;
+  updateProg(n);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (n === 2) updateQProgress();
+}
+
+function next(from) { if (validate(from)) show(from + 1); }
+function prev(from) { show(from - 1); }
+
+// Q progress
+function updateQProgress() {
+  let answered = 0;
+  for (let i = 1; i <= 10; i++) {
+    if (document.querySelector('input[name=q' + i + ']:checked')) answered++;
+  }
+  const f = document.getElementById('qfill');
+  const c = document.getElementById('qcount');
+  if (f) f.style.width = (answered / 10 * 100) + '%';
+  if (c) c.textContent = answered + ' / 10';
+}
+document.querySelectorAll('input[name^="q"]').forEach(r => {
+  r.addEventListener('change', updateQProgress);
+});
+
+// Validate
+function validate(phase) {
+  let ok = true;
+
+  function chk(id, eid, fn) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const valid = fn(el.value);
+    el.classList.toggle('invalid', !valid);
+    const err = document.getElementById(eid);
+    if (err) err.classList.toggle('on', !valid);
+    if (!valid) ok = false;
+  }
+
+  function radio(name, eid) {
+    const v = !!document.querySelector('input[name=' + name + ']:checked');
+    const err = document.getElementById(eid);
+    if (err) err.classList.toggle('on', !v);
+    if (!v) ok = false;
+  }
+
+  if (phase === 1) {
+    chk('fullname', 'e-name',  v => v.trim().length > 0);
+    chk('nickname', 'e-nick',  v => v.trim().length > 0);
+    chk('email',   'e-email', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v));
+    chk('bdate',   'e-bdate', v => v.length > 0);
+    chk('job',     'e-job',   v => v.trim().length > 0);
+    chk('loc',     'e-loc',   v => v.trim().length > 0);
+  }
+
+  if (phase === 2) {
+    let allDone = true;
+    for (let i = 1; i <= 10; i++) {
+      if (!document.querySelector('input[name=q' + i + ']:checked')) { allDone = false; break; }
+    }
+    const err = document.getElementById('e-q');
+    if (err) err.classList.toggle('on', !allDone);
+    if (!allDone) ok = false;
+  }
+
+  if (phase === 3) {
+    radio('tone',    'e-tone');
+    radio('density', 'e-den');
+    chk('mission', 'e-mission', v => v.trim().length > 0);
+  }
+
+  if (phase === 4) {
+    radio('blood', 'e-blood');
+    radio('recep', 'e-recep');
+  }
+
+  return ok;
+}
+
+// Auto-compute from birthdate
+const ZODIAC = [
+  [1,20,'水瓶座'],[2,19,'魚座'],[3,21,'牡羊座'],[4,20,'牡牛座'],
+  [5,21,'双子座'],[6,21,'蟹座'],[7,23,'獅子座'],[8,23,'乙女座'],
+  [9,23,'天秤座'],[10,23,'蠍座'],[11,22,'射手座'],[12,22,'山羊座'],[12,31,'水瓶座']
+];
+const ETO = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const KANSHI = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+const SHUKU = ['角','亢','氐','房','心','尾','箕','斗','女','虚','危','室','壁','奎','婁','胃','昴','畢','觜','参','井','鬼','柳','星','張','翼','軫'];
+
+document.getElementById('bdate').addEventListener('change', function () {
+  const parts = this.value.split('-').map(Number);
+  if (parts.length < 3) return;
+  const [y, m, d] = parts;
+  let z = '水瓶座';
+  for (const [mm, dd, s] of ZODIAC) { if (m < mm || (m === mm && d <= dd)) { z = s; break; } }
+  setTag('tg-z', '♈ 星座: ' + z);
+  setTag('tg-e', '🐉 干支: ' + ETO[((y - 4) % 12 + 12) % 12]);
+  setTag('tg-k', '☯ 日干: '  + KANSHI[((y - 4) % 10 + 10) % 10]);
+  const day = Math.floor(new Date(y, m - 1, d).getTime() / 86400000);
+  setTag('tg-s', '✦ 星宿: ' + SHUKU[((day % 27) + 27) % 27] + '宿');
+});
+
+function setTag(id, txt) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = txt;
+  el.classList.remove('empty');
+}
+
+// Submit
+function doSubmit(e) {
+  e.preventDefault();
+  if (!validate(4)) return;
+  document.getElementById('form').style.display = 'none';
+  document.getElementById('prog').style.display = 'none';
+  document.querySelector('.hdr').style.display = 'none';
+  document.getElementById('succ').classList.add('on');
+}
+</script>
+</body>
+</html>
