@@ -34,13 +34,19 @@
 設定ファイル: `.env.local`（`.env.example` からコピー）
 
 ```bash
-OPENAI_API_KEY=<key>                  # AIチャット機能に必須
-DATABASE_URL=postgresql://...         # PostgreSQL接続文字列
-JWT_SECRET=<secret>                   # JWT署名用シークレット
-NEXTAUTH_SECRET=<secret>              # NextAuth.jsシークレット
-NEXTAUTH_URL=http://localhost:3000    # アプリのURL
-NEXT_PUBLIC_APP_NAME=COCORO           # アプリ表示名
-NEXT_PUBLIC_APP_URL=https://...       # アプリの公開URL
+# cocoro-core 連携（cocoro-sdk）
+COCORO_CORE_ENABLED=false          # true にすると cocoro-core を優先使用
+COCORO_CORE_URL=http://192.168.50.92:8001
+COCORO_CORE_API_KEY=<key>
+
+# OpenAI API（cocoro-core無効時のフォールバック）
+OPENAI_API_KEY=<key>
+
+# Database / Auth
+DATABASE_URL=postgresql://...
+JWT_SECRET=<secret>
+NEXTAUTH_SECRET=<secret>
+NEXTAUTH_URL=http://localhost:3000
 ```
 
 ---
