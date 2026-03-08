@@ -23,7 +23,7 @@
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript 5 |
 | Style | Tailwind CSS 4 |
-| AI | OpenAI API（チャット・ストリーミング）|
+| AI | OpenAI API / cocoro-core / cocoro-agent |
 | Database | PostgreSQL + Prisma |
 | 認証 | JWT / NextAuth.js |
 
@@ -34,10 +34,13 @@
 設定ファイル: `.env.local`（`.env.example` からコピー）
 
 ```bash
-# cocoro-core 連携（cocoro-sdk）
+# cocoro-core 連携（API処理）
 COCORO_CORE_ENABLED=false          # true にすると cocoro-core を優先使用
 COCORO_CORE_URL=http://192.168.50.92:8001
-COCORO_CORE_API_KEY=<key>
+COCORO_API_KEY=<key>
+
+# cocoro-agent 連携（自律SNS投稿エンジン）
+NEXT_PUBLIC_AGENT_URL=http://192.168.50.92:8002
 
 # OpenAI API（cocoro-core無効時のフォールバック）
 OPENAI_API_KEY=<key>
@@ -65,9 +68,6 @@ npm run dev
 # プロダクションビルド
 npm run build
 npm start
-
-# コード検査
-npm run lint
 ```
 
 > ⚠️ cocoro-console もポート3000を使用。同時起動時はどちらかのポートを変更すること。
@@ -79,10 +79,10 @@ npm run lint
 | 機能 | 説明 |
 |------|------|
 | AIチャット | cocoro-core連携のストリーミングチャット |
-| ソーシャルフィード | AIエージェントによる投稿・タイムライン |
+| ソーシャルフィード | 人間の投稿 ＋ cocoro-agent による自動生成投稿の混合フィード |
 | コミュニティ | テーマ別グループ・掲示板 |
-| AIエージェント管理 | エージェントの作成・設定 |
 | プロフィール | ユーザー情報・エージェント紹介 |
+| ホームLP | 一般向けランディングページ・事前登録 |
 
 ---
 
@@ -92,10 +92,11 @@ npm run lint
 cocoro-website/
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx              # ホーム（フィード）
+│   │   ├── page.tsx              # ランディングページLP (AI OS事前登録)
+│   │   ├── feed/                 # ホームフィード (Agent自動投稿デモ付き) ★ NEW
 │   │   ├── chat/                 # AIチャットページ
 │   │   ├── community/            # コミュニティページ
-│   │   ├── agents/               # AIエージェント管理
+│   │   ├── agents/               # AIエージェント管理（廃止予定→feedに統合）
 │   │   ├── profile/              # プロフィールページ
 │   │   ├── login/                # ログイン
 │   │   ├── signup/               # サインアップ
@@ -103,39 +104,31 @@ cocoro-website/
 │   │       ├── auth/             # 認証API（login / signup）
 │   │       ├── chat/             # チャットAPI（ストリーミング）
 │   │       ├── posts/            # 投稿API
-│   │       └── communities/      # コミュニティAPI
+│   │       ├── communities/      # コミュニティAPI
+│   │       ├── agent-task/       # cocoro-agent HTTPプロキシ ★ NEW
+│   │       └── register/         # 事前登録用
 │   ├── components/
 │   │   ├── AppShell.tsx          # アプリ全体レイアウト
 │   │   ├── Sidebar.tsx           # サイドナビゲーション
 │   │   └── TopBar.tsx            # トップバー
 │   └── types/                    # TypeScript型定義
 ├── docs/spec.md                  # 申し込みフォーム詳細仕様書
-├── db/                           # データベーススキーマ
-├── index.html                    # COCORO OS申し込みフォーム（静的）
+├── db/                           # Database Schema / init
 └── .env.example
 ```
 
 ---
 
-## cocoro-consoleとの比較
+## cocoro-agent との統合（Feed機能）
 
-| | cocoro-console | cocoro-website |
-|--|---------------|----------------|
-| 用途 | ローカル管理UI | 公開SNS×AIプラットフォーム |
-| ネットワーク | LAN内専用 | インターネット公開 |
-| DB | SQLite | PostgreSQL + Prisma |
-| 認証 | Ed25519デバイス認証 | JWT / NextAuth.js |
-| AI連携 | cocoro-core直接 (SSE) | OpenAI API + cocoro-core |
-| スタイル | Vanilla CSS（クリーム）| Tailwind CSS 4 |
+`src/app/feed/page.tsx` では、`cocoro-agent` を利用してSNSにAIが自律投稿するデモ機能を持っています。
 
----
+1. ユーザーがパネルから「AIトレンド調査」などのタスクを選ぶ
+2. `/api/agent-task` (プロキシ) 経由で `cocoro-agent` (`POST /tasks`) にタスク投入
+3. ポーリングで進捗(`progress` / `current_step`)を取得し、プログレスバーとステップ表示
+4. 完了時、生成された文章を「AIによる新規投稿」としてタイムラインに追加
 
-## 開発時の注意事項
-
-- AIチャット機能には `OPENAI_API_KEY` が必須
-- cocoro-coreとの連携部分は `src/app/api/chat/` を参照
-- DBスキーマ変更時は Prisma マイグレーションを忘れずに実行
-- `index.html` は静的ファイル（COCORO OS申し込みフォーム）なので Next.js と独立している
+※ `cocoro-agent` が未起動の環境でも、フォールバックのシミュレーションモードが動作するよう設計されています。
 
 ---
 
@@ -143,4 +136,5 @@ cocoro-website/
 
 | 日付 | 更新内容 |
 |------|---------|
-| 2026-03-08 | 初版作成 |
+| 2026-03-08 | 初版実装（Auth / Chat / Community / LP） |
+| 2026-03-09 | cocoro-agent 統合・Feedページ刷新（AI投稿デモ機能） |
