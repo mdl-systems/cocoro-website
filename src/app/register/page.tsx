@@ -229,6 +229,7 @@ export default function RegisterPage() {
                         <div className="card">
                             <Field label="生年月日" required error={errors.birthdate}>
                                 <input className={`inp ${errors.birthdate ? "invalid" : ""}`} type="date"
+                                    min="1900-01-01" max="2026-12-31"
                                     value={form.birthdate} onChange={e => set("birthdate", e.target.value)} />
                                 {astro && (
                                     <div className="auto-tags">

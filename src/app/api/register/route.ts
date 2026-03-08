@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     // ─── バリデーション ──────────────────────────────
     const required = ["fullname", "nickname", "email", "birthdate", "job", "location", "tone", "density", "mission", "blood", "receptivity"];
     for (const key of required) {
-      const val = (body as Record<string, unknown>)[key];
+      const val = (body as unknown as Record<string, unknown>)[key];
       if (!val || String(val).trim() === "") {
         return NextResponse.json(
           { success: false, error: `必須項目が未入力です: ${key}` },
@@ -49,6 +49,15 @@ export async function POST(request: NextRequest) {
     if (!emailRegex.test(body.email)) {
       return NextResponse.json(
         { success: false, error: "有効なメールアドレスを入力してください" },
+        { status: 400 }
+      );
+    }
+
+    // 生年月日の年を 1900〜2026 に制限
+    const bdYear = new Date(body.birthdate).getFullYear();
+    if (isNaN(bdYear) || bdYear < 1900 || bdYear > 2026) {
+      return NextResponse.json(
+        { success: false, error: "生年月日の年は1900〜2026の範囲で入力してください" },
         { status: 400 }
       );
     }
