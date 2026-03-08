@@ -19,6 +19,8 @@ import {
     Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
+
 
 interface Agent {
     id: number;
@@ -252,24 +254,26 @@ function AgentCard({ agent }: { agent: Agent }) {
                         </span>
                     )}
                 </div>
-                <button
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-medium cursor-pointer transition-all hover:translate-y-[-1px]"
-                    style={{
-                        background:
-                            agent.status === "active"
-                                ? "linear-gradient(135deg, #8b5cf6, #6d28d9)"
-                                : "rgba(139,92,246,0.15)",
-                        color: agent.status === "active" ? "white" : "#a78bfa",
-                        boxShadow:
-                            agent.status === "active"
-                                ? "0 4px 12px rgba(139,92,246,0.3)"
-                                : "none",
-                        border: agent.status === "active" ? "none" : "1px solid rgba(139,92,246,0.2)",
-                    }}
-                >
-                    <Play className="w-3 h-3" />
-                    {agent.status === "active" ? "チャット開始" : "有効化"}
-                </button>
+                <Link href={agent.status === "active" ? "/chat" : "/register"}>
+                    <button
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-medium cursor-pointer transition-all hover:translate-y-[-1px]"
+                        style={{
+                            background:
+                                agent.status === "active"
+                                    ? "linear-gradient(135deg, #8b5cf6, #6d28d9)"
+                                    : "rgba(139,92,246,0.15)",
+                            color: agent.status === "active" ? "white" : "#a78bfa",
+                            boxShadow:
+                                agent.status === "active"
+                                    ? "0 4px 12px rgba(139,92,246,0.3)"
+                                    : "none",
+                            border: agent.status === "active" ? "none" : "1px solid rgba(139,92,246,0.2)",
+                        }}
+                    >
+                        <Play className="w-3 h-3" />
+                        {agent.status === "active" ? "チャット開始" : "有効化"}
+                    </button>
+                </Link>
             </div>
         </div>
     );
@@ -288,18 +292,20 @@ export default function AgentsPage() {
                         <span className="text-[#e8e8f0] font-semibold">{agents.filter(a => a.isOwn).length}</span>{" "}
                         件のエージェントを管理中
                     </div>
-                    <button
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium cursor-pointer transition-all hover:translate-y-[-1px]"
-                        style={{
-                            background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
-                            color: "white",
-                            boxShadow: "0 4px 14px rgba(139,92,246,0.3)",
-                            border: "none",
-                        }}
-                    >
-                        <Plus className="w-4 h-4" />
-                        新規エージェント
-                    </button>
+                    <Link href="/register">
+                        <button
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-medium cursor-pointer transition-all hover:translate-y-[-1px]"
+                            style={{
+                                background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
+                                color: "white",
+                                boxShadow: "0 4px 14px rgba(139,92,246,0.3)",
+                                border: "none",
+                            }}
+                        >
+                            <Plus className="w-4 h-4" />
+                            新規エージェント登録
+                        </button>
+                    </Link>
                 </div>
 
                 {/* Template Quick Start */}
@@ -321,28 +327,29 @@ export default function AgentsPage() {
                         {templates.map((t, i) => {
                             const Icon = t.icon;
                             return (
-                                <button
-                                    key={i}
-                                    className="flex flex-col items-center gap-2 p-4 rounded-xl cursor-pointer transition-all hover:translate-y-[-2px] hover:shadow-lg"
-                                    style={{
-                                        background: `${t.color}08`,
-                                        border: `1px solid ${t.color}18`,
-                                    }}
-                                >
-                                    <div
-                                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                                <Link key={i} href="/register">
+                                    <button
+                                        className="flex flex-col items-center gap-2 p-4 rounded-xl cursor-pointer transition-all hover:translate-y-[-2px] hover:shadow-lg w-full"
                                         style={{
-                                            background: `${t.color}15`,
-                                            border: `1px solid ${t.color}25`,
+                                            background: `${t.color}08`,
+                                            border: `1px solid ${t.color}18`,
                                         }}
                                     >
-                                        <Icon className="w-5 h-5" style={{ color: t.color }} />
-                                    </div>
-                                    <div className="text-[13px] font-medium text-[#e8e8f0]">
-                                        {t.name}
-                                    </div>
-                                    <div className="text-[10px] text-[#6b6b80]">{t.desc}</div>
-                                </button>
+                                        <div
+                                            className="w-10 h-10 rounded-xl flex items-center justify-center"
+                                            style={{
+                                                background: `${t.color}15`,
+                                                border: `1px solid ${t.color}25`,
+                                            }}
+                                        >
+                                            <Icon className="w-5 h-5" style={{ color: t.color }} />
+                                        </div>
+                                        <div className="text-[13px] font-medium text-[#e8e8f0]">
+                                            {t.name}
+                                        </div>
+                                        <div className="text-[10px] text-[#6b6b80]">{t.desc}</div>
+                                    </button>
+                                </Link>
                             );
                         })}
                     </div>
