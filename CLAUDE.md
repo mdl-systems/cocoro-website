@@ -35,12 +35,12 @@
 
 ```bash
 # cocoro-core 連携（API処理）
-COCORO_CORE_ENABLED=false          # true にすると cocoro-core を優先使用
+COCORO_CORE_ENABLED=true          # true にすると cocoro-core を優先使用
 COCORO_CORE_URL=http://192.168.50.92:8001
-COCORO_API_KEY=<key>
+COCORO_CORE_API_KEY=cocoro-2026   # cocoro-core へのアクセスキー (501 の場合もフォールバックで使用)
 
 # cocoro-agent 連携（自律SNS投稿エンジン）
-NEXT_PUBLIC_AGENT_URL=http://192.168.50.92:8002
+COCORO_AGENT_URL=http://192.168.50.92:8002
 
 # OpenAI API（cocoro-core無効時のフォールバック）
 OPENAI_API_KEY=<key>
@@ -138,3 +138,4 @@ cocoro-website/
 |------|---------|
 | 2026-03-08 | 初版実装（Auth / Chat / Community / LP） |
 | 2026-03-09 | cocoro-agent 統合・Feedページ刷新（AI投稿デモ機能） |
+| 2026-03-09 | cocoro-core 連携: SDKの501認証フォールバック対応、擬似SSEストリーミングの実装 |

@@ -95,15 +95,24 @@ cp .env.example .env.local
 | 変数名 | 説明 |
 |--------|------|
 | `COCORO_CORE_ENABLED` | `true` で cocoro-core を優先使用（デフォルト: `false`）|
-| `COCORO_CORE_URL` | cocoro-core API のエンドポイント URL |
-| `COCORO_CORE_API_KEY` | cocoro-core の API キー |
+| `COCORO_CORE_URL` | cocoro-core API のエンドポイント URL（例: `http://192.168.50.92:8001`）|
+| `COCORO_CORE_API_KEY` | cocoro-core の API キー（デフォルト: `cocoro-2026`）|
+| `COCORO_AGENT_URL` | cocoro-agent のエンドポイント URL（例: `http://192.168.50.92:8002`）|
 | `OPENAI_API_KEY` | OpenAI API キー（cocoro-core 無効時に使用）|
 | `DATABASE_URL` | PostgreSQL 接続文字列 |
 | `JWT_SECRET` | JWT 署名用シークレット |
 | `NEXTAUTH_SECRET` | NextAuth.js シークレット |
 | `NEXTAUTH_URL` | アプリの URL（ローカル: `http://localhost:3000`）|
 
-### 4. 開発サーバーの起動
+### 4. SDK のインストール (必要な場合)
+
+`@mdl-systems/cocoro-sdk` はローカルパッケージとしてリンクされています。エラーが出る場合は、隣接する `cocoro-sdk` ディレクトリでビルドした `.tgz` ファイルを指定してインストールしてください。
+
+```bash
+npm install ../cocoro-sdk/mdl-systems-cocoro-sdk-0.1.0.tgz
+```
+
+### 5. 開発サーバーの起動
 
 ```bash
 npm run dev
