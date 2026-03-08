@@ -27,13 +27,13 @@ export async function POST(request: NextRequest) {
 
                 return NextResponse.json({
                     success: true,
-                    response: res.text,
+                    response: (res as any).response || res.text,
                     model: "cocoro-core",
                     persona: persona || "COCORO",
-                    thread_id: res.sessionId,
+                    thread_id: (res as any).session_id || res.sessionId,
                     emotion: res.emotion,
                     action: res.action,
-                    timestamp: res.timestamp,
+                    timestamp: (res as any).timestamp,
                 });
             } catch (err) {
                 if (err instanceof CocoroAuthError) {
@@ -139,25 +139,28 @@ export async function GET(request: NextRequest) {
     const stream = new ReadableStream({
         async start(controller) {
             try {
-                const chatStream = await cocoro.chat.stream({ message, sessionId });
+                // cocoro-coreは現在/chat/streamエンドポイントを持たないため、通常POSTを擬似ストリーミング
+                const res = await cocoro.chat.send({ message, sessionId });
 
-                for await (const chunk of chatStream) {
-                    const data = `data: ${JSON.stringify({ text: chunk.text })}\n\n`;
+                // 拟似ストリーミング (20文字ずつ一定間隔で送信)
+                const text = (res as any).response || res.text || "";
+                const chunkSize = 5;
+                for (let i = 0; i < text.length; i += chunkSize) {
+                    const chunk = text.slice(i, i + chunkSize);
+                    const data = `data: ${JSON.stringify({ text: chunk })}\n\n`;
                     controller.enqueue(encoder.encode(data));
+                    await new Promise((resolve) => setTimeout(resolve, 30)); // 30ms sleep
                 }
 
                 // 完了メタ情報
-                const final = await chatStream.final();
-                if (final) {
-                    const finalData = `data: ${JSON.stringify({ type: "final", ...final })}\n\n`;
-                    controller.enqueue(encoder.encode(finalData));
-                }
+                const finalData = `data: ${JSON.stringify({ type: "final", sessionId: (res as any).session_id || res.sessionId, emotion: res.emotion, action: res.action })}\n\n`;
+                controller.enqueue(encoder.encode(finalData));
 
                 controller.enqueue(encoder.encode("data: [DONE]\n\n"));
                 controller.close();
             } catch (err) {
                 const msg =
-                    err instanceof CocoroError ? err.message : "ストリームエラー";
+                    err instanceof CocoroError ? err.message : "ストリームリクエスト失敗";
                 controller.enqueue(
                     encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`)
                 );

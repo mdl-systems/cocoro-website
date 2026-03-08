@@ -149,7 +149,7 @@ export default function ChatPage() {
         setIsTyping(true);
 
         // ── SSEストリーミング試行（cocoro-core 有効時）──────────────────
-        const streamUrl = `/api/chat/stream?message=${encodeURIComponent(sentInput)}&session_id=web-${activePersona}`;
+        const streamUrl = `/api/chat?message=${encodeURIComponent(sentInput)}&session_id=web-${activePersona}`;
         const streamRes = await fetch(streamUrl).catch(() => null);
 
         if (streamRes?.ok && streamRes.body) {
