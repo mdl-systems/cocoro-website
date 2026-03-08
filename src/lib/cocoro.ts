@@ -18,6 +18,7 @@ export function getCocoroClient(): CocoroClient | null {
     if (!_client) {
         const baseUrl = process.env.COCORO_CORE_URL;
         const apiKey = process.env.COCORO_CORE_API_KEY;
+        const agentUrl = process.env.COCORO_AGENT_URL; // cocoro-agent (port 8002) オプション
 
         if (!baseUrl || !apiKey) {
             console.warn(
@@ -27,7 +28,11 @@ export function getCocoroClient(): CocoroClient | null {
             return null;
         }
 
-        _client = new CocoroClient({ baseUrl, apiKey });
+        _client = new CocoroClient({
+            baseUrl,
+            apiKey,
+            ...(agentUrl ? { agentUrl } : {}),
+        });
     }
 
     return _client;
@@ -35,3 +40,4 @@ export function getCocoroClient(): CocoroClient | null {
 
 /** COCORO_CORE_ENABLED フラグ（クライアントコンポーネントでの分岐用） */
 export const isCocoroEnabled = ENABLED;
+

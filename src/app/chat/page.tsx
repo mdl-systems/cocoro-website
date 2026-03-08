@@ -134,10 +134,10 @@ export default function ChatPage() {
     }, [messages]);
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() || isTyping) return;
 
         const userMsg: Message = {
-            id: messages.length + 1,
+            id: Date.now(),
             role: "user",
             content: input,
             timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
@@ -148,6 +148,52 @@ export default function ChatPage() {
         setInput("");
         setIsTyping(true);
 
+        // ── SSEストリーミング試行（cocoro-core 有効時）──────────────────
+        const streamUrl = `/api/chat/stream?message=${encodeURIComponent(sentInput)}&session_id=web-${activePersona}`;
+        const streamRes = await fetch(streamUrl).catch(() => null);
+
+        if (streamRes?.ok && streamRes.body) {
+            // SSE逐次受信
+            const streamId = Date.now() + 1;
+            setMessages(prev => [...prev, {
+                id: streamId, role: "assistant", content: "", timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
+            }]);
+
+            const reader = streamRes.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let accumulated = "";
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop() ?? "";
+                    for (const line of lines) {
+                        if (!line.startsWith("data: ")) continue;
+                        const raw = line.slice(6).trim();
+                        if (raw === "[DONE]") break;
+                        try {
+                            const parsed = JSON.parse(raw);
+                            if (parsed.error) throw new Error(parsed.error);
+                            if (typeof parsed.text === "string") {
+                                accumulated += parsed.text;
+                                setMessages(prev => prev.map(m => m.id === streamId ? { ...m, content: accumulated } : m));
+                            }
+                        } catch { /* ignore parse errors */ }
+                    }
+                }
+            } catch {
+                setMessages(prev => prev.map(m => m.id === streamId ? { ...m, content: accumulated || "⚠️ ストリームエラーが発生しました。" } : m));
+            } finally {
+                setIsTyping(false);
+            }
+            return;
+        }
+
+        // ── POST フォールバック（OpenAI / Mock）──────────────────────────
         try {
             const res = await fetch("/api/chat", {
                 method: "POST",
@@ -159,24 +205,24 @@ export default function ChatPage() {
             });
             const data = await res.json();
             const aiMsg: Message = {
-                id: messages.length + 2,
+                id: Date.now() + 1,
                 role: "assistant",
                 content: data.response || "応答を取得できませんでした。",
                 timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
             };
             setMessages(prev => [...prev, aiMsg]);
         } catch {
-            const errMsg: Message = {
-                id: messages.length + 2,
+            setMessages(prev => [...prev, {
+                id: Date.now() + 1,
                 role: "assistant",
                 content: "⚠️ 通信エラーが発生しました。しばらくしてから再度お試しください。",
                 timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
-            };
-            setMessages(prev => [...prev, errMsg]);
+            }]);
         } finally {
             setIsTyping(false);
         }
     };
+
 
 
     return (
