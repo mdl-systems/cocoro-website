@@ -133,38 +133,51 @@ export default function ChatPage() {
         scrollToBottom();
     }, [messages]);
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (!input.trim()) return;
 
         const userMsg: Message = {
             id: messages.length + 1,
             role: "user",
             content: input,
-            timestamp: new Date().toLocaleTimeString("ja-JP", {
-                hour: "2-digit",
-                minute: "2-digit",
-            }),
+            timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
         };
 
-        setMessages([...messages, userMsg]);
+        setMessages(prev => [...prev, userMsg]);
+        const sentInput = input;
         setInput("");
         setIsTyping(true);
 
-        // Simulate AI response
-        setTimeout(() => {
+        try {
+            const res = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: sentInput,
+                    persona: personas[activePersona].name,
+                }),
+            });
+            const data = await res.json();
             const aiMsg: Message = {
                 id: messages.length + 2,
                 role: "assistant",
-                content: generateResponse(input),
-                timestamp: new Date().toLocaleTimeString("ja-JP", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                }),
+                content: data.response || "応答を取得できませんでした。",
+                timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
             };
-            setMessages((prev) => [...prev, aiMsg]);
+            setMessages(prev => [...prev, aiMsg]);
+        } catch {
+            const errMsg: Message = {
+                id: messages.length + 2,
+                role: "assistant",
+                content: "⚠️ 通信エラーが発生しました。しばらくしてから再度お試しください。",
+                timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
+            };
+            setMessages(prev => [...prev, errMsg]);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
+
 
     return (
         <AppShell
@@ -467,16 +480,5 @@ export default function ChatPage() {
     );
 }
 
-function generateResponse(input: string): string {
-    const lower = input.toLowerCase();
-    if (lower.includes("コード") || lower.includes("プログラ")) {
-        return `コード生成のご依頼ですね！✨\n\n以下はサンプルコードです：\n\n\`\`\`typescript\nconst greeting = (name: string): string => {\n  return \`Hello, \${name}! Welcome to COCORO.\`;\n};\n\nconsole.log(greeting("User"));\n\`\`\`\n\nこのコードは TypeScript で書かれた簡単な挨拶関数です。何か具体的なコードを生成しましょうか？`;
-    }
-    if (lower.includes("翻訳") || lower.includes("英語")) {
-        return `翻訳のお手伝いをします！🌐\n\n翻訳したいテキストを入力してください。以下の言語に対応しています：\n\n• 🇯🇵 日本語 ↔ 🇺🇸 英語\n• 🇯🇵 日本語 ↔ 🇨🇳 中国語\n• 🇯🇵 日本語 ↔ 🇰🇷 韓国語\n• その他多数の言語\n\nどの言語への翻訳をご希望ですか？`;
-    }
-    if (lower.includes("アイデア") || lower.includes("提案")) {
-        return `アイデアの壁打ちですね！💡\n\n面白い提案をいくつか考えてみましょう：\n\n1. **AIメンタリングプラットフォーム**\n   個人の学習スタイルに合わせたAIメンターを提供\n\n2. **共同創造スペース**\n   AIと人間がリアルタイムでアートを共同制作\n\n3. **知識グラフSNS**\n   ユーザーの知識を可視化し、関連する専門家同士をマッチング\n\nどのアイデアをもっと深掘りしましょうか？`;
-    }
-    return `ご質問ありがとうございます！✦\n\n「${input}」について考えてみますね。\n\nこのトピックには複数の視点からアプローチできます。まず、基本的な概念を整理してから、具体的な解決策や提案をお伝えしましょう。\n\nもう少し具体的な情報を教えていただけますか？\n\n• どのような目的で知りたいですか？\n• 特に重要視しているポイントはありますか？\n• 期限や制約条件はありますか？\n\n詳しく教えていただければ、より的確なお答えができます！`;
-}
+
+

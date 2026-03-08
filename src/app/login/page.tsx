@@ -1,210 +1,123 @@
 "use client";
 
-import {
-    Sparkles,
-    Mail,
-    Lock,
-    Eye,
-    EyeOff,
-    ArrowRight,
-} from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { login } from "@/lib/auth";
 
 export default function LoginPage() {
-    const [showPassword, setShowPassword] = useState(false);
+    const router = useRouter();
+    const [showPw, setShowPw] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleLogin = async () => {
+        setError("");
+        if (!email || !password) { setError("メールアドレスとパスワードを入力してください"); return; }
+        setLoading(true);
+        await new Promise(r => setTimeout(r, 400)); // UX delay
+        const result = login(email, password);
+        setLoading(false);
+        if (!result.ok) { setError(result.error || "ログインに失敗しました"); return; }
+        router.push("/feed");
+    };
 
     return (
-        <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-            {/* Background Effects */}
-            <div
-                className="fixed inset-0 pointer-events-none"
-                style={{
-                    backgroundImage:
-                        "linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px)",
-                    backgroundSize: "60px 60px",
-                }}
-            />
-            <div
-                className="fixed w-[500px] h-[500px] rounded-full pointer-events-none"
-                style={{
-                    background: "#8b5cf6",
-                    filter: "blur(150px)",
-                    opacity: 0.08,
-                    top: "-100px",
-                    right: "-100px",
-                    animation: "orb1 20s ease-in-out infinite alternate",
-                }}
-            />
-            <div
-                className="fixed w-[400px] h-[400px] rounded-full pointer-events-none"
-                style={{
-                    background: "#06b6d4",
-                    filter: "blur(150px)",
-                    opacity: 0.06,
-                    bottom: "-100px",
-                    left: "-100px",
-                    animation: "orb2 25s ease-in-out infinite alternate",
-                }}
-            />
-
-            <div className="relative z-10 w-full max-w-[420px] px-6 animate-slide-up">
+        <div style={bg}>
+            <div style={orb1} /><div style={orb2} /><div style={grid} />
+            <div style={wrap}>
                 {/* Logo */}
-                <div className="text-center mb-10">
-                    <div
-                        className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5"
-                        style={{
-                            background: "linear-gradient(135deg, #8b5cf6, #06b6d4)",
-                            boxShadow: "0 0 30px rgba(139,92,246,0.3)",
-                        }}
-                    >
-                        <Sparkles className="w-7 h-7 text-white" />
-                    </div>
-                    <h1
-                        className="text-[28px] font-bold text-[#e8e8f0] mb-2"
-                        style={{ fontFamily: "Space Grotesk, sans-serif" }}
-                    >
-                        お帰りなさい
-                    </h1>
-                    <p className="text-[13px] text-[#6b6b80]">
-                        COCOROにログインして、AIとの対話を続けましょう
-                    </p>
+                <div style={{ textAlign: "center", marginBottom: 36 }}>
+                    <div style={logo}>✦</div>
+                    <h1 style={h1}>お帰りなさい</h1>
+                    <p style={sub}>COCOROにログインして、AIとの対話を続けましょう</p>
                 </div>
 
-                {/* Form */}
-                <div
-                    className="rounded-2xl p-8"
-                    style={{
-                        background: "rgba(13, 13, 18, 0.8)",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                        backdropFilter: "blur(20px)",
-                    }}
-                >
+                {/* Card */}
+                <div style={card}>
+                    {error && <div style={errBox}>{error}</div>}
+
                     {/* Email */}
-                    <div className="mb-5">
-                        <label className="block text-[11px] text-[#6b6b80] tracking-wider uppercase mb-2">
-                            メールアドレス
-                        </label>
-                        <div className="relative">
-                            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b6b80]" />
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="your@email.com"
-                                className="input-field pl-10"
-                            />
+                    <div style={field}>
+                        <label style={label}>メールアドレス</label>
+                        <div style={{ position: "relative" }}>
+                            <Mail style={ico} />
+                            <input style={inp} type="email" value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                                placeholder="your@email.com" />
                         </div>
                     </div>
 
                     {/* Password */}
-                    <div className="mb-6">
-                        <label className="block text-[11px] text-[#6b6b80] tracking-wider uppercase mb-2">
-                            パスワード
-                        </label>
-                        <div className="relative">
-                            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b6b80]" />
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="パスワードを入力"
-                                className="input-field pl-10 pr-10"
-                            />
-                            <button
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer"
-                            >
-                                {showPassword ? (
-                                    <EyeOff className="w-4 h-4 text-[#6b6b80]" />
-                                ) : (
-                                    <Eye className="w-4 h-4 text-[#6b6b80]" />
-                                )}
+                    <div style={field}>
+                        <label style={label}>パスワード</label>
+                        <div style={{ position: "relative" }}>
+                            <Lock style={ico} />
+                            <input style={{ ...inp, paddingRight: 44 }}
+                                type={showPw ? "text" : "password"} value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                                placeholder="パスワードを入力" />
+                            <button onClick={() => setShowPw(!showPw)} style={eyeBtn}>
+                                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                         </div>
                     </div>
 
-                    {/* Forgot Password */}
-                    <div className="text-right mb-6">
-                        <a
-                            href="#"
-                            className="text-[12px] text-[#8b5cf6] hover:text-[#a78bfa] transition-colors"
-                        >
-                            パスワードを忘れた方
-                        </a>
+                    <div style={{ textAlign: "right", marginBottom: 22 }}>
+                        <a href="#" style={{ fontSize: 12, color: "#8b5cf6" }}>パスワードを忘れた方</a>
                     </div>
 
-                    {/* Login Button */}
-                    <Link href="/">
-                        <button
-                            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-[14px] font-medium cursor-pointer transition-all hover:translate-y-[-1px]"
-                            style={{
-                                background: "linear-gradient(135deg, #8b5cf6, #6d28d9)",
-                                color: "white",
-                                boxShadow: "0 4px 18px rgba(139,92,246,0.35)",
-                                border: "none",
-                            }}
-                        >
-                            ログイン
-                            <ArrowRight className="w-4 h-4" />
-                        </button>
-                    </Link>
+                    <button onClick={handleLogin} disabled={loading} style={primaryBtn}>
+                        {loading ? "ログイン中…" : "ログイン"}
+                        {!loading && <ArrowRight size={16} />}
+                    </button>
 
-                    {/* Divider */}
-                    <div className="flex items-center gap-4 my-6">
-                        <div
-                            className="flex-1 h-px"
-                            style={{ background: "rgba(255,255,255,0.06)" }}
-                        />
-                        <span className="text-[11px] text-[#6b6b80]">または</span>
-                        <div
-                            className="flex-1 h-px"
-                            style={{ background: "rgba(255,255,255,0.06)" }}
-                        />
-                    </div>
+                    <div style={divider}><div style={line} /><span style={or}>または</span><div style={line} /></div>
 
-                    {/* Social Login */}
-                    <div className="space-y-3">
-                        <button
-                            className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-[13px] cursor-pointer transition-all hover:border-[rgba(255,255,255,0.15)]"
-                            style={{
-                                background: "rgba(255,255,255,0.03)",
-                                border: "1px solid rgba(255,255,255,0.08)",
-                                color: "#a1a1b5",
-                            }}
-                        >
-                            <span className="text-[16px]">G</span>
-                            Googleでログイン
-                        </button>
-                        <button
-                            className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-[13px] cursor-pointer transition-all hover:border-[rgba(255,255,255,0.15)]"
-                            style={{
-                                background: "rgba(255,255,255,0.03)",
-                                border: "1px solid rgba(255,255,255,0.08)",
-                                color: "#a1a1b5",
-                            }}
-                        >
-                            <span className="text-[16px]">🍎</span>
-                            Appleでログイン
-                        </button>
-                    </div>
+                    <button style={socialBtn}><span>G</span> Googleでログイン</button>
                 </div>
 
-                {/* Signup Link */}
-                <div className="text-center mt-6">
-                    <span className="text-[13px] text-[#6b6b80]">
-                        アカウントをお持ちでないですか？{" "}
-                    </span>
-                    <Link
-                        href="/signup"
-                        className="text-[13px] text-[#8b5cf6] hover:text-[#a78bfa] font-medium transition-colors"
-                    >
-                        新規登録 →
-                    </Link>
+                <div style={{ textAlign: "center", marginTop: 22, fontSize: 13, color: "#6b6b80" }}>
+                    アカウントをお持ちでないですか？{" "}
+                    <Link href="/signup" style={{ color: "#8b5cf6", fontWeight: 500 }}>新規登録 →</Link>
+                </div>
+                <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: "#4a4a5e" }}>
+                    <Link href="/" style={{ color: "#4a4a5e" }}>← トップに戻る</Link>
                 </div>
             </div>
+            <style>{`
+              input::placeholder{color:#4a4a5e;}
+              input:focus{outline:none;border-color:rgba(139,92,246,0.6)!important;box-shadow:0 0 0 3px rgba(139,92,246,0.1);}
+              button:hover:not(:disabled){transform:translateY(-1px);}
+              button:disabled{opacity:0.6;cursor:not-allowed;}
+            `}</style>
         </div>
     );
 }
+
+// ─── styles ──────────────────────────────────────────────────────────────────
+const bg: React.CSSProperties = { minHeight: "100vh", background: "#060608", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" };
+const orb1: React.CSSProperties = { position: "fixed", width: 500, height: 500, borderRadius: "50%", background: "#8b5cf6", filter: "blur(150px)", opacity: 0.08, top: -100, right: -100, pointerEvents: "none" };
+const orb2: React.CSSProperties = { position: "fixed", width: 400, height: 400, borderRadius: "50%", background: "#06b6d4", filter: "blur(150px)", opacity: 0.06, bottom: -100, left: -100, pointerEvents: "none" };
+const grid: React.CSSProperties = { position: "fixed", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px)", backgroundSize: "60px 60px", pointerEvents: "none" };
+const wrap: React.CSSProperties = { position: "relative", zIndex: 10, width: "100%", maxWidth: 420, padding: "0 24px" };
+const logo: React.CSSProperties = { width: 56, height: 56, borderRadius: 16, background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 26, boxShadow: "0 0 30px rgba(139,92,246,0.3)" };
+const h1: React.CSSProperties = { fontSize: 28, fontWeight: 700, color: "#e8e8f0", marginBottom: 8, fontFamily: "Space Grotesk,sans-serif" };
+const sub: React.CSSProperties = { fontSize: 13, color: "#6b6b80" };
+const card: React.CSSProperties = { background: "rgba(13,13,18,0.85)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, padding: 32, backdropFilter: "blur(20px)" };
+const errBox: React.CSSProperties = { background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", color: "#f87171", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 16 };
+const field: React.CSSProperties = { marginBottom: 20 };
+const label: React.CSSProperties = { display: "block", fontSize: 11, color: "#6b6b80", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 };
+const inp: React.CSSProperties = { width: "100%", background: "#13131c", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "12px 16px 12px 42px", color: "#e8e8f0", fontSize: 14, boxSizing: "border-box", transition: "border-color .2s,box-shadow .2s" };
+const ico: React.CSSProperties = { position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", width: 16, height: 16, color: "#6b6b80", pointerEvents: "none" };
+const eyeBtn: React.CSSProperties = { position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#6b6b80", cursor: "pointer", padding: 0 };
+const primaryBtn: React.CSSProperties = { width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px 0", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 4px 18px rgba(139,92,246,0.35)", transition: "all .2s" };
+const divider: React.CSSProperties = { display: "flex", alignItems: "center", gap: 16, margin: "22px 0" };
+const line: React.CSSProperties = { flex: 1, height: 1, background: "rgba(255,255,255,0.06)" };
+const or: React.CSSProperties = { fontSize: 11, color: "#6b6b80" };
+const socialBtn: React.CSSProperties = { width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "12px 0", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "#a1a1b5", fontSize: 13, cursor: "pointer", transition: "all .2s" };
