@@ -19,24 +19,29 @@ import {
     Users,
     MoreHorizontal,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getSession } from "@/lib/auth";
+import type { AuthUser } from "@/lib/auth";
 
-const userProfile = {
-    name: "ゲストユーザー",
-    handle: "@guest_user",
-    avatar: "U",
-    avatarBg: "linear-gradient(135deg, #f472b6, #8b5cf6)",
-    bio: "AIと共に次世代のコミュニケーションを探索中。テクノロジー × クリエイティビティの可能性を信じています。COCORO AIプラットフォームで知識の共同創造を。",
-    location: "東京, Japan",
-    joined: "2024年3月",
-    website: "cocoro.ai",
-    stats: {
-        posts: 142,
-        followers: 1893,
-        following: 326,
-        aiChats: 487,
-    },
-};
+function buildProfile(user: AuthUser | null) {
+    const name = user?.name || "ゲストユーザー";
+    const initial = name.charAt(0).toUpperCase();
+    const joinedDate = user?.createdAt
+        ? new Date(user.createdAt).toLocaleDateString("ja-JP", { year: "numeric", month: "long" })
+        : "2026年3月";
+    return {
+        name,
+        handle: `@${name.toLowerCase().replace(/\s+/g, "_")}`,
+        avatar: initial,
+        avatarBg: "linear-gradient(135deg, #f472b6, #8b5cf6)",
+        email: user?.email || "",
+        bio: "AIと共に次世代のコミュニケーションを探索中。テクノロジー × クリエイティビティの可能性を信じています。COCORO AIプラットフォームで知識の共同創造を。",
+        location: "東京, Japan",
+        joined: joinedDate,
+        website: "cocoro.ai",
+        stats: { posts: 0, followers: 0, following: 0, aiChats: 0 },
+    };
+}
 
 const achievements = [
     {
@@ -99,6 +104,11 @@ const tabs = ["投稿", "いいね", "メディア", "ブックマーク"];
 
 export default function ProfilePage() {
     const [activeTab, setActiveTab] = useState(0);
+    const [session, setSession] = useState<AuthUser | null>(null);
+
+    useEffect(() => { setSession(getSession()); }, []);
+
+    const userProfile = buildProfile(session);
 
     return (
         <AppShell title="プロフィール" subtitle="あなたのデジタルアイデンティティ">
