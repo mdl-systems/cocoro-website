@@ -1,58 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
+import { signJWT, COOKIE_NAME, COOKIE_OPTS } from "@/lib/jwt";
 
 // POST /api/auth/signup
 export async function POST(request: NextRequest) {
     try {
-        const { username, email, password } = await request.json();
+        const { name, username, email, password } = await request.json();
+        const displayName = name || username;
 
-        // Validate input
-        if (!username || !email || !password) {
-            return NextResponse.json(
-                { error: "すべての項目を入力してください" },
-                { status: 400 }
-            );
+        if (!displayName || !email || !password) {
+            return NextResponse.json({ error: "すべての項目を入力してください" }, { status: 400 });
         }
 
-        if (password.length < 8) {
-            return NextResponse.json(
-                { error: "パスワードは8文字以上にしてください" },
-                { status: 400 }
-            );
+        if (password.length < 6) {
+            return NextResponse.json({ error: "パスワードは6文字以上にしてください" }, { status: 400 });
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            return NextResponse.json(
-                { error: "有効なメールアドレスを入力してください" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "有効なメールアドレスを入力してください" }, { status: 400 });
         }
 
-        // TODO: Replace with actual DB insert
-        // TODO: Hash password with bcrypt
+        // デモ: 実際には DB insert + パスワードハッシュ（bcrypt）
         const user = {
             id: `usr_${Date.now()}`,
-            username,
+            name: displayName,
             email,
-            avatar: null,
-            created_at: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
         };
 
-        const token = `cocoro_jwt_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+        const token = signJWT({ sub: user.id, name: user.name, email: user.email });
 
-        return NextResponse.json(
-            {
-                success: true,
-                user,
-                token,
-                message: "アカウントが作成されました",
-            },
+        const res = NextResponse.json(
+            { success: true, user, message: "アカウントが作成されました" },
             { status: 201 }
         );
-    } catch (error) {
-        return NextResponse.json(
-            { error: "サーバーエラーが発生しました" },
-            { status: 500 }
-        );
+        res.headers.set("Set-Cookie", `${COOKIE_NAME}=${token}; ${COOKIE_OPTS}`);
+        return res;
+    } catch {
+        return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
     }
 }

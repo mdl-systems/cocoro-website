@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// ── SSEストリーミングエンドポイント
+// ── SSEストリーミングエンドポイント（真のword-by-wordストリーミング）
 // GET /api/chat/stream?message=...&session_id=...
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
@@ -127,53 +127,57 @@ export async function GET(request: NextRequest) {
     }
 
     const cocoro = getCocoroClient();
-    if (!cocoro) {
-        return NextResponse.json(
-            { error: "cocoro-core が無効です (COCORO_CORE_ENABLED=false)" },
-            { status: 503 }
-        );
-    }
-
     const encoder = new TextEncoder();
 
-    const stream = new ReadableStream({
+    const readable = new ReadableStream({
         async start(controller) {
-            try {
-                // cocoro-coreは現在/chat/streamエンドポイントを持たないため、通常POSTを擬似ストリーミング
-                const res = await cocoro.chat.send({ message, sessionId });
+            const send = (data: unknown) =>
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
 
-                // 拟似ストリーミング (20文字ずつ一定間隔で送信)
-                const text = (res as any).response || res.text || "";
-                const chunkSize = 5;
-                for (let i = 0; i < text.length; i += chunkSize) {
-                    const chunk = text.slice(i, i + chunkSize);
-                    const data = `data: ${JSON.stringify({ text: chunk })}\n\n`;
-                    controller.enqueue(encoder.encode(data));
-                    await new Promise((resolve) => setTimeout(resolve, 30)); // 30ms sleep
+            if (!cocoro) {
+                // モックモード: 文字ごとに50ms間隔で送信
+                const mockText = `ご質問ありがとうございます ✦\n\n「${message}」についてお答えします。\n\n具体的にどの方向で掘り下げたいか教えてください：\n1. 基本概念の理解\n2. 実践的な応用方法\n3. 最新のトレンド情報`;
+                for (const char of mockText) {
+                    send({ text: char });
+                    await new Promise((r) => setTimeout(r, 18));
+                }
+                send({ type: "final", sessionId: null, emotion: null, action: "mock" });
+                send("[DONE]");
+                controller.close();
+                return;
+            }
+
+            try {
+                // 真のSSEストリーミング: cocoro-sdk の stream() を使用
+                const chatStream = await cocoro.chat.stream({ message, sessionId });
+
+                for await (const chunk of chatStream) {
+                    send({ text: chunk.text });
                 }
 
-                // 完了メタ情報
-                const finalData = `data: ${JSON.stringify({ type: "final", sessionId: (res as any).session_id || res.sessionId, emotion: res.emotion, action: res.action })}\n\n`;
-                controller.enqueue(encoder.encode(finalData));
-
-                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                const finalMeta = await chatStream.final();
+                send({
+                    type: "final",
+                    sessionId: finalMeta?.sessionId ?? null,
+                    emotion: finalMeta?.emotion ?? null,
+                    action: finalMeta?.action ?? "talk",
+                });
+                send("[DONE]");
                 controller.close();
             } catch (err) {
-                const msg =
-                    err instanceof CocoroError ? err.message : "ストリームリクエスト失敗";
-                controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`)
-                );
+                const msg = err instanceof CocoroError ? err.message : "ストリームエラー";
+                send({ error: msg });
                 controller.close();
             }
         },
     });
 
-    return new Response(stream, {
+    return new Response(readable, {
         headers: {
             "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache",
-            Connection: "keep-alive",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         },
     });
 }

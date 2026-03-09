@@ -25,11 +25,23 @@ export default function Sidebar() {
     const [user, setUser] = useState<AuthUser | null>(null);
 
     useEffect(() => {
-        setUser(getSession());
+        // Cookie セッションを優先、フォールバックは localStorage
+        fetch("/api/auth/me", { credentials: "include" })
+            .then(async (res) => {
+                if (res.ok) {
+                    const data = await res.json();
+                    setUser({ name: data.user.name, email: data.user.email, createdAt: "" });
+                } else {
+                    setUser(getSession());
+                }
+            })
+            .catch(() => setUser(getSession()));
     }, []);
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        // Cookie ログアウト
+        await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => { });
+        logout(); // localStorage もクリア
         router.push("/login");
     };
 

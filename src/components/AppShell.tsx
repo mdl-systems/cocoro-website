@@ -21,12 +21,27 @@ export default function AppShell({ children, title, subtitle }: AppShellProps) {
 
     useEffect(() => {
         if (PUBLIC_PATHS.includes(pathname)) { setChecked(true); return; }
-        const session = getSession();
-        if (!session) {
-            router.replace("/login");
-        } else {
-            setChecked(true);
-        }
+
+        // 1. Cookie ベース JWT セッション確認（サーバーサイド）
+        fetch("/api/auth/me", { credentials: "include" })
+            .then(async (res) => {
+                if (res.ok) {
+                    setChecked(true); // Cookie セッション有効
+                } else {
+                    // 2. フォールバック: localStorage セッション確認
+                    const session = getSession();
+                    if (session) {
+                        setChecked(true);
+                    } else {
+                        router.replace("/login");
+                    }
+                }
+            })
+            .catch(() => {
+                // ネットワークエラー時は localStorage にフォールバック
+                const session = getSession();
+                if (session) { setChecked(true); } else { router.replace("/login"); }
+            });
     }, [pathname, router]);
 
     if (!checked) {
