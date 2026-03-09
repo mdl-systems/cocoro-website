@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8002";
-const AGENT_KEY = process.env.COCORO_API_KEY ?? "cocoro-dev-2026";
+const AGENT_URL = process.env.COCORO_AGENT_URL ?? "http://localhost:8002";
+const AGENT_KEY = process.env.COCORO_CORE_API_KEY ?? "cocoro-dev-2026";
 
 function headers() {
     return {
@@ -35,6 +35,33 @@ export async function POST(req: NextRequest) {
             status: "queued",
             message: "cocoro-agent offline, running demo mode",
         });
+    }
+}
+
+// PUT /api/agent-task  → タスク完了時にPost永続化
+export async function PUT(req: NextRequest) {
+    try {
+        const { content, is_ai_generated, ai_model, tags } = await req.json();
+        if (!content?.trim()) {
+            return NextResponse.json({ error: "content required" }, { status: 400 });
+        }
+        // /api/posts に内部フォワード（モック・DBどちらでも動く）
+        const origin = req.nextUrl.origin;
+        const postRes = await fetch(`${origin}/api/posts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                content,
+                is_ai_generated: is_ai_generated ?? true,
+                ai_model: ai_model ?? "cocoro-agent",
+                tags: tags ?? ["AI生成", "エージェント"],
+            }),
+        });
+        const data = await postRes.json();
+        return NextResponse.json(data, { status: postRes.status });
+    } catch (err) {
+        console.error("[agent-task] PUT error:", err);
+        return NextResponse.json({ error: "failed to save post" }, { status: 500 });
     }
 }
 

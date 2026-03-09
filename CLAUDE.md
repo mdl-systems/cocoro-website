@@ -23,8 +23,9 @@
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript 5 |
 | Style | Tailwind CSS 4 |
-| AI | OpenAI API / cocoro-core / cocoro-agent |
-| Database | PostgreSQL + Prisma |
+| Core API | `@mdl-systems/cocoro-sdk` |
+| AI | cocoro-core (SSEストリーミング) / OpenAI フォールバック |
+| Database | PostgreSQL (`pg` direct connection) |
 | 認証 | JWT / NextAuth.js |
 
 ---
@@ -145,5 +146,6 @@ npm start
 |------|---------|
 | 2026-03-08 | 初版実装（Auth / Chat / Community / LP） |
 | 2026-03-09 | cocoro-agent 統合・Feedページ刷新（AI投稿デモ機能） |
-| 2026-03-09 | cocoro-core 連携: SDKの501認証フォールバック対応、擬似SSEストリーミングの実装 |
+| 2026-03-09 | cocoro-core 連携: cocoro-sdk統合・真のSSEストリーミング実装 |
+| 2026-03-09 | DB連携: pg(node-postgres)でSNS投稿・コミュニティをPostgreSQLに永続化 |
 | 2026-03-09 | 機能追加: register→cocoro-core人格同期、Cookie JWTセッション（me/logoutエンドポイント追加）|
