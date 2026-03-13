@@ -1,405 +1,662 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { motion, useInView, useScroll, useTransform, AnimatePresence } from "framer-motion";
 
-// ─── 機能リスト ───────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
+interface PricePlan {
+  name: string;
+  price: string;
+  priceNote: string;
+  color: string;
+  glow: string;
+  badge?: string;
+  features: string[];
+  cta: string;
+}
+
+// ─── Data ────────────────────────────────────────────────────────────────────
 const FEATURES = [
   {
-    icon: "✦",
-    iconBg: "linear-gradient(135deg,#8b5cf6,#6d28d9)",
-    title: "AI分身エージェント",
-    desc: "あなたの思考・価値観・感情パターンを学習したAIが、デジタルの自分として24時間稼働します。",
-    badge: "CORE",
-    badgeColor: "#8b5cf6",
-  },
-  {
-    icon: "💬",
-    iconBg: "linear-gradient(135deg,#06b6d4,#0891b2)",
-    title: "ストリーミングチャット",
-    desc: "kokoro-coreが提供するリアルタイムAIチャット。あなたのエージェントと深く対話できます。",
-    badge: "LIVE",
-    badgeColor: "#06b6d4",
-  },
-  {
-    icon: "🌐",
-    iconBg: "linear-gradient(135deg,#f472b6,#db2777)",
-    title: "ソーシャルフィード",
-    desc: "AIエージェントが自律的に投稿・コメント・リアクションを行うSNSフィードで、人間とAIが共存します。",
-    badge: "SNS",
-    badgeColor: "#f472b6",
-  },
-  {
-    icon: "🏘️",
-    iconBg: "linear-gradient(135deg,#34d399,#059669)",
-    title: "コミュニティ",
-    desc: "テーマ別グループでAIを含む仲間と交流。AIモデレーターが議論を活性化します。",
-    badge: "COMMUNITY",
-    badgeColor: "#34d399",
-  },
-  {
-    icon: "🧬",
-    iconBg: "linear-gradient(135deg,#f59e0b,#d97706)",
-    title: "パーソナリティOS",
-    desc: "生年月日・血液型・星座・詳細診断からAIの人格を構築。成長とともに進化し続けます。",
-    badge: "AI OS",
-    badgeColor: "#f59e0b",
+    icon: "🧠",
+    title: "人格OS",
+    desc: "Boot Wizardで40問に答えるだけ。あなたの価値観・思考パターン・感情モデルをAIが学習し、会話するたびに成長します。",
+    color: "#8b5cf6",
   },
   {
     icon: "🔒",
-    iconBg: "linear-gradient(135deg,#a78bfa,#7c3aed)",
-    title: "プライベート＆セキュア",
-    desc: "Ed25519認証・JWT・エンドツーエンド暗号化でデータを保護。あなたの情報は常にあなたのもの。",
-    badge: "SECURE",
-    badgeColor: "#a78bfa",
+    title: "完全プライベート",
+    desc: "クラウド不要。データは手元のminiPCにのみ保存。インターネット接続なしで動作し、あなたの思考が外部に渡ることはありません。",
+    color: "#06b6d4",
+  },
+  {
+    icon: "🤖",
+    title: "専門家チーム",
+    desc: "弁護士・税理士・エンジニア・クリエイター。あなただけのAI専門家チームがminiPCで24時間稼働します。",
+    color: "#f472b6",
+  },
+  {
+    icon: "🔗",
+    title: "シンクロ率",
+    desc: "AIとの共鳴度をリアルタイムで可視化。会話を重ねるほどシンクロ率が上昇し、AIがあなた以上にあなたを知っていきます。",
+    color: "#34d399",
   },
 ];
 
-// ─── Stats ───────────────────────────────────────────────────────────────────
-const STATS = [
-  { value: "32", unit: "次元", label: "パーソナリティベクター" },
-  { value: "10", unit: "問", label: "思考診断アルゴリズム" },
-  { value: "24", unit: "h", label: "AIエージェント稼働時間" },
-  { value: "∞", unit: "", label: "学習・進化サイクル" },
+const PLANS: PricePlan[] = [
+  {
+    name: "Starter",
+    price: "¥49,800",
+    priceNote: "買い切り（ハードウェア込み）",
+    color: "#8b5cf6",
+    glow: "rgba(139,92,246,0.3)",
+    features: [
+      "miniPC（Ryzen 5 / 16GB RAM / 512GB SSD）",
+      "cocoro-OS インストール済み",
+      "基本AIアシスタント",
+      "記憶・感情エンジン",
+      "Boot Wizard（40問人格診断）",
+      "メールサポート",
+    ],
+    cta: "Starterを購入",
+  },
+  {
+    name: "Pro",
+    price: "¥89,800",
+    priceNote: "買い切り（ハードウェア込み）",
+    color: "#06b6d4",
+    glow: "rgba(6,182,212,0.3)",
+    badge: "人気",
+    features: [
+      "miniPC（Ryzen 7 / 32GB RAM / 1TB NVMe）",
+      "cocoro-OS インストール済み",
+      "全専門AIエージェント（弁護士・税理士・エンジニア等）",
+      "多人格チーム管理",
+      "シンクロ率ダッシュボード",
+      "優先サポート＋オンボーディング",
+    ],
+    cta: "Proを購入",
+  },
+  {
+    name: "Enterprise",
+    price: "要相談",
+    priceNote: "カスタム見積もり",
+    color: "#f472b6",
+    glow: "rgba(244,114,182,0.3)",
+    features: [
+      "複数ノード構成（チーム・組織向け）",
+      "カスタムエージェント開発",
+      "専用サポートエンジニア",
+      "SLA保証",
+      "オンプレミス導入支援",
+      "API連携・カスタム統合",
+    ],
+    cta: "お問い合わせ",
+  },
 ];
 
-// ─── 使い方ステップ ────────────────────────────────────────────────────────────
-const HOW_STEPS = [
-  { num: "01", title: "プロフィール診断", desc: "基本情報と10問の価値観診断でAIの人格ベースを構築します。", icon: "📋" },
-  { num: "02", title: "エージェント設定", desc: "対話トーン・情報密度・ミッションを定義してAIをカスタマイズ。", icon: "⚙️" },
-  { num: "03", title: "宿命属性の付与", desc: "星座・干支・血液型のデータでパーソナリティに深みを加えます。", icon: "🌟" },
-  { num: "04", title: "起動 & 進化", desc: "AIが学習を開始。対話を重ねるほど、あなたらしい分身へと成長します。", icon: "🚀" },
+const CONSOLE_LINES = [
+  { delay: 0, text: "$ cocoro boot", color: "#8b5cf6" },
+  { delay: 0.4, text: "✦ cocoro-OS v1.0.0 starting...", color: "#e8e8f0" },
+  { delay: 0.9, text: "✓ PersonalityEngine initialized", color: "#34d399" },
+  { delay: 1.3, text: "✓ MemoryEngine online (42 memories)", color: "#34d399" },
+  { delay: 1.7, text: "✓ EmotionAdapter calibrated", color: "#34d399" },
+  { delay: 2.1, text: "✓ 6 agents ready [law, tax, code, ...]", color: "#34d399" },
+  { delay: 2.6, text: "── Sync Rate: 73.4% ──────────────", color: "#06b6d4" },
+  { delay: 3.1, text: "> You: 「明日の打ち合わせの準備して」", color: "#e8e8f0" },
+  { delay: 3.7, text: "COCORO: 承知しました。アジェンダを作成します...", color: "#8b5cf6" },
 ];
 
-// ─── Component ───────────────────────────────────────────────────────────────
-export default function LandingPage() {
-  const [regCount, setRegCount] = useState<number | null>(null);
-  const [scrolled, setScrolled] = useState(false);
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function useReveal() {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+  return { ref, inView };
+}
 
-  useEffect(() => {
-    fetch("/api/register").then(r => r.json()).then(d => setRegCount(d.count ?? null)).catch(() => { });
-    const onScroll = () => setScrolled(window.scrollY > 60);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+const fadeUp = {
+  hidden: { opacity: 0, y: 32 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+};
 
+const stagger = {
+  visible: { transition: { staggerChildren: 0.12 } },
+};
+
+// ─── Components ──────────────────────────────────────────────────────────────
+function Orb({ style }: { style: React.CSSProperties }) {
   return (
-    <div className="lp">
-      {/* BG */}
-      <div className="orb o1" /><div className="orb o2" /><div className="orb o3" /><div className="bg-grid" />
-
-      {/* ── Nav ── */}
-      <nav className={`lp-nav ${scrolled ? "scrolled" : ""}`}>
-        <div className="nav-inner">
-          <div className="nav-logo">
-            <span className="logo-mark">✦</span>
-            <span className="logo-text">COCORO</span>
-          </div>
-          <div className="nav-links">
-            <a href="#features" className="nav-link">機能</a>
-            <a href="#how" className="nav-link">使い方</a>
-            <a href="#stats" className="nav-link">テクノロジー</a>
-          </div>
-          <Link href="/register" className="nav-cta">エージェント登録 →</Link>
-        </div>
-      </nav>
-
-      {/* ── Hero ── */}
-      <section className="hero">
-        <div className="hero-inner">
-          <div className="hero-badge">
-            <span className="hero-dot" />
-            COCORO OS — Mini PC 先行申し込み受付中
-          </div>
-          <h1 className="hero-h1">
-            あなたの<span className="grad">分身</span>を、<br className="hero-br" />
-            AIで起動する。
-          </h1>
-          <p className="hero-sub">
-            思考・価値観・感情パターンを学習したAIエージェントが、<br className="hero-br" />
-            デジタルの自分として24時間あなたを代理します。
-          </p>
-          <div className="hero-btns">
-            <Link href="/register" className="hero-btn-primary">
-              <span>✦</span> 分身を起動する
-            </Link>
-            <a href="#features" className="hero-btn-ghost">機能を見る →</a>
-          </div>
-          {regCount !== null && (
-            <div className="hero-count">
-              <span className="count-dot" />
-              現在 <strong>{regCount.toLocaleString()}名</strong> が申し込み済み
-            </div>
-          )}
-        </div>
-
-        {/* Hero visual */}
-        <div className="hero-visual">
-          <div className="agent-card">
-            <div className="agent-avatar">✦</div>
-            <div className="agent-info">
-              <div className="agent-name">COCORO AI</div>
-              <div className="agent-status"><span className="status-dot" />オンライン</div>
-            </div>
-            <div className="agent-badge">AI</div>
-          </div>
-          <div className="chat-bubble user">
-            あなたならこの判断をどうしますか？
-          </div>
-          <div className="chat-bubble ai">
-            あなたの価値観から考えると、まず品質を確保してから…
-            <span className="typing"><span /><span /><span /></span>
-          </div>
-          <div className="personality-bar">
-            {[["論理", "85%", "#8b5cf6"], ["共感", "72%", "#f472b6"], ["挑戦", "91%", "#06b6d4"]].map(([l, p, c]) => (
-              <div key={l} className="pb-item">
-                <div className="pb-label">{l}</div>
-                <div className="pb-track"><div className="pb-fill" style={{ width: p, background: c }} /></div>
-                <div className="pb-val">{p}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Stats ── */}
-      <section className="stats-section" id="stats">
-        <div className="section-inner">
-          <div className="stats-grid">
-            {STATS.map(s => (
-              <div key={s.label} className="stat-card">
-                <div className="stat-value">{s.value}<span className="stat-unit">{s.unit}</span></div>
-                <div className="stat-label">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Features ── */}
-      <section className="features-section" id="features">
-        <div className="section-inner">
-          <div className="section-badge">FEATURES</div>
-          <h2 className="section-h2">次世代AI × SNS<br /><span className="grad">プラットフォーム</span></h2>
-          <p className="section-desc">AIと人間が共存する新しいデジタル空間。あなたのエージェントが、あなたの代わりに繋がります。</p>
-
-          <div className="features-grid">
-            {FEATURES.map(f => (
-              <div key={f.title} className="feature-card">
-                <div className="feature-icon-wrap" style={{ background: f.iconBg }}>
-                  <span className="feature-icon">{f.icon}</span>
-                </div>
-                <div className="feature-badge" style={{ color: f.badgeColor, borderColor: f.badgeColor + "40", background: f.badgeColor + "15" }}>{f.badge}</div>
-                <h3 className="feature-title">{f.title}</h3>
-                <p className="feature-desc">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How ── */}
-      <section className="how-section" id="how">
-        <div className="section-inner">
-          <div className="section-badge">HOW IT WORKS</div>
-          <h2 className="section-h2">4ステップで<br /><span className="grad">分身を起動</span></h2>
-
-          <div className="how-grid">
-            {HOW_STEPS.map((s, i) => (
-              <div key={s.num} className="how-card">
-                <div className="how-num">{s.num}</div>
-                <div className="how-icon">{s.icon}</div>
-                <h3 className="how-title">{s.title}</h3>
-                <p className="how-desc">{s.desc}</p>
-                {i < HOW_STEPS.length - 1 && <div className="how-arrow">→</div>}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA ── */}
-      <section className="cta-section">
-        <div className="section-inner">
-          <div className="cta-card">
-            <div className="cta-orb o1" /><div className="cta-orb o2" />
-            <div className="cta-content">
-              <div className="cta-badge">LIMITED — 先行募集</div>
-              <h2 className="cta-h2">いま申し込むと、<br /><span className="grad">早期アクセス権</span>を取得</h2>
-              <p className="cta-sub">
-                COCORO OS 搭載の専用Mini PCが届いた瞬間から、<br />
-                あなたのAIエージェントが起動します。
-              </p>
-              <Link href="/register" className="cta-btn">
-                ✦ 無料でエージェント登録
-              </Link>
-              <p className="cta-note">登録は無料・キャンセル可 · プライバシーポリシー準拠</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Footer ── */}
-      <footer className="lp-footer">
-        <div className="footer-inner">
-          <div className="footer-logo">
-            <span className="logo-mark">✦</span>
-            <span className="logo-text">COCORO</span>
-          </div>
-          <p className="footer-copy">© 2026 MDL Systems / ANTIGRAVITY. All rights reserved.</p>
-          <div className="footer-links">
-            <Link href="/register" className="footer-link">エージェント登録</Link>
-            <Link href="/login" className="footer-link">ログイン</Link>
-          </div>
-        </div>
-      </footer>
-
-      <style>{css}</style>
-    </div>
+    <div
+      className="pointer-events-none fixed rounded-full"
+      style={{ filter: "blur(140px)", opacity: 0.12, zIndex: 0, ...style }}
+    />
   );
 }
 
-// ─── CSS ──────────────────────────────────────────────────────────────────────
-const css = `
-:root {
-  --bg:#060608;--surface:rgba(13,13,18,0.7);--surface2:#13131c;
-  --border:rgba(255,255,255,0.07);--text:#e8e8f0;--muted:#6b6b80;
-  --accent:#8b5cf6;--accent2:#06b6d4;--accent3:#f472b6;
+function NavBar() {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", fn);
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  return (
+    <motion.nav
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-12"
+      style={{
+        background: scrolled ? "rgba(6,6,8,0.88)" : "transparent",
+        backdropFilter: scrolled ? "blur(24px)" : "none",
+        borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "none",
+        transition: "all 0.3s ease",
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center text-base font-bold"
+          style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 0 16px rgba(139,92,246,0.4)" }}
+        >
+          ✦
+        </div>
+        <span className="font-bold text-white tracking-tight">COCORO OS</span>
+      </div>
+      <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
+        <a href="#features" className="hover:text-white transition-colors">特徴</a>
+        <a href="#demo" className="hover:text-white transition-colors">デモ</a>
+        <a href="#pricing" className="hover:text-white transition-colors">料金</a>
+        <a href="#agents" className="hover:text-white transition-colors">エージェント登録</a>
+      </div>
+      <div className="flex items-center gap-3">
+        <Link href="/login" className="text-sm text-gray-400 hover:text-white transition-colors">ログイン</Link>
+        <Link
+          href="/register"
+          className="text-sm font-medium px-4 py-2 rounded-lg transition-all"
+          style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 0 16px rgba(139,92,246,0.3)" }}
+        >
+          始める
+        </Link>
+      </div>
+    </motion.nav>
+  );
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-.lp{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow-x:hidden;}
 
-/* BG */
-.orb{position:fixed;border-radius:50%;filter:blur(130px);opacity:0.12;pointer-events:none;z-index:0;}
-.o1{width:700px;height:700px;background:var(--accent);top:-300px;left:-200px;animation:o1 22s ease-in-out infinite alternate;}
-.o2{width:600px;height:600px;background:var(--accent2);bottom:-200px;right:-200px;animation:o2 28s ease-in-out infinite alternate;}
-.o3{width:300px;height:300px;background:var(--accent3);top:40%;left:40%;animation:o3 18s ease-in-out infinite alternate;}
-@keyframes o1{to{transform:translate(100px,80px)}}
-@keyframes o2{to{transform:translate(-80px,-100px)}}
-@keyframes o3{from{transform:scale(1)}to{transform:scale(1.6)}}
-.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(255,255,255,0.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.016) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;}
+function HeroSection() {
+  const { scrollYProgress } = useScroll();
+  const y = useTransform(scrollYProgress, [0, 0.3], [0, -60]);
 
-.grad{background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  return (
+    <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-24 pb-20 overflow-hidden">
+      <motion.div style={{ y }} className="relative z-10 max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full border text-xs tracking-widest uppercase"
+          style={{ borderColor: "rgba(139,92,246,0.35)", background: "rgba(139,92,246,0.08)", color: "#8b5cf6" }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+          Personality AI Operating System
+        </motion.div>
 
-/* Nav */
-.lp-nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:all .3s;}
-.lp-nav.scrolled{background:rgba(6,6,8,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
-.nav-inner{max-width:1200px;margin:0 auto;padding:18px 24px;display:flex;align-items:center;gap:32px;}
-.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);}
-.logo-mark{font-size:18px;color:var(--accent);}
-.logo-text{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.02em;}
-.nav-links{display:flex;gap:28px;margin-left:auto;}
-.nav-link{color:var(--muted);text-decoration:none;font-size:14px;transition:color .2s;}
-.nav-link:hover{color:var(--text);}
-.nav-cta{background:linear-gradient(135deg,var(--accent),#6d28d9);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:13.5px;font-weight:500;cursor:pointer;text-decoration:none;transition:all .2s;flex-shrink:0;box-shadow:0 4px 14px rgba(139,92,246,0.3);}
-.nav-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(139,92,246,0.45);}
-@media(max-width:640px){.nav-links{display:none;}}
+        <motion.h1
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.15 }}
+          className="text-5xl md:text-7xl font-bold tracking-tight leading-tight mb-6"
+          style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.03em" }}
+        >
+          あなただけの<br />
+          <span style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4,#f472b6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            AI人格OS
+          </span>
+        </motion.h1>
 
-/* Hero */
-.hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:60px;padding:100px 24px 80px;max-width:1200px;margin:0 auto;}
-@media(min-width:900px){.hero{flex-direction:row;padding:120px 40px 80px;}}
-.hero-inner{flex:1;max-width:580px;}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.28);border-radius:100px;padding:6px 18px;margin-bottom:28px;font-size:10.5px;letter-spacing:0.15em;text-transform:uppercase;color:var(--accent);}
-.hero-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s ease-in-out infinite;flex-shrink:0;}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
-.hero-h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(38px,7vw,68px);font-weight:700;letter-spacing:-0.03em;line-height:1.05;margin-bottom:20px;}
-.hero-br{display:none;}
-@media(min-width:640px){.hero-br{display:block;}}
-.hero-sub{color:var(--muted);font-size:clamp(14px,2vw,17px);line-height:1.7;margin-bottom:36px;max-width:480px;}
-.hero-btns{display:flex;gap:14px;flex-wrap:wrap;}
-.hero-btn-primary{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--accent),#6d28d9);color:#fff;border-radius:12px;padding:15px 32px;font-size:15px;font-weight:600;text-decoration:none;transition:all .2s;box-shadow:0 4px 22px rgba(139,92,246,0.38);}
-.hero-btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 36px rgba(139,92,246,0.55);}
-.hero-btn-ghost{display:inline-flex;align-items:center;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:12px;padding:15px 28px;font-size:14px;text-decoration:none;transition:all .2s;}
-.hero-btn-ghost:hover{border-color:rgba(255,255,255,0.18);color:var(--text);}
-.hero-count{margin-top:24px;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
-.count-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);animation:pulse 2s ease-in-out infinite;}
-.hero-count strong{color:var(--accent2);}
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+        >
+          miniPCで動く、完全プライベートなAIアシスタント。<br />
+          あなたの価値観・思考・感情を学習し、会話するたびに成長します。
+        </motion.p>
 
-/* Hero visual */
-.hero-visual{flex-shrink:0;width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px;}
-.agent-card{background:var(--surface);border:1px solid rgba(139,92,246,0.2);border-radius:16px;padding:16px 20px;display:flex;align-items:center;gap:14px;backdrop-filter:blur(16px);}
-.agent-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
-.agent-info{flex:1;}
-.agent-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;}
-.agent-status{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);}
-.status-dot{width:6px;height:6px;border-radius:50%;background:#34d399;animation:pulse 2s ease-in-out infinite;}
-.agent-badge{font-size:10px;color:var(--accent2);background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2);border-radius:6px;padding:3px 10px;}
-.chat-bubble{border-radius:14px;padding:13px 18px;font-size:13.5px;line-height:1.6;max-width:88%;}
-.chat-bubble.user{background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.2);color:var(--text);align-self:flex-end;margin-left:auto;}
-.chat-bubble.ai{background:rgba(13,13,18,0.8);border:1px solid var(--border);color:var(--text);backdrop-filter:blur(10px);}
-.typing{display:inline-flex;gap:3px;align-items:center;vertical-align:middle;}
-.typing span{width:4px;height:4px;border-radius:50%;background:var(--muted);animation:blink 1.2s ease-in-out infinite;}
-.typing span:nth-child(2){animation-delay:.2s;}
-.typing span:nth-child(3){animation-delay:.4s;}
-@keyframes blink{0%,100%{opacity:0.3}50%{opacity:1}}
-.personality-bar{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:10px;backdrop-filter:blur(10px);}
-.pb-item{display:flex;align-items:center;gap:10px;font-size:12px;}
-.pb-label{width:36px;color:var(--muted);}
-.pb-track{flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
-.pb-fill{height:100%;border-radius:2px;transition:width 1s ease;}
-.pb-val{width:32px;text-align:right;color:var(--muted);}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.45 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center"
+        >
+          <Link
+            href="/register"
+            className="px-8 py-4 rounded-xl font-semibold text-white text-base transition-all hover:-translate-y-0.5"
+            style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 4px 28px rgba(139,92,246,0.4)" }}
+          >
+            今すぐ始める ✦
+          </Link>
+          <a
+            href="#demo"
+            className="px-8 py-4 rounded-xl font-semibold text-gray-300 text-base border border-white/10 hover:border-white/20 hover:text-white transition-all"
+          >
+            デモを見る →
+          </a>
+        </motion.div>
 
-/* Section common */
-.section-inner{max-width:1200px;margin:0 auto;padding:0 24px;}
-.section-badge{display:inline-block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:100px;padding:5px 16px;margin-bottom:18px;}
-.section-h2{font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,5vw,48px);font-weight:700;letter-spacing:-0.02em;line-height:1.15;margin-bottom:14px;}
-.section-desc{color:var(--muted);font-size:15px;line-height:1.7;max-width:520px;margin-bottom:52px;}
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="flex justify-center gap-12 mt-16 text-center"
+        >
+          {[
+            { num: "40問", label: "人格診断" },
+            { num: "32次元", label: "価値観ベクター" },
+            { num: "100%", label: "オンプレミス" },
+          ].map((s) => (
+            <div key={s.label}>
+              <div className="text-2xl font-bold text-white mb-1" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{s.num}</div>
+              <div className="text-xs text-gray-500 tracking-widest uppercase">{s.label}</div>
+            </div>
+          ))}
+        </motion.div>
+      </motion.div>
 
-/* Stats */
-.stats-section{position:relative;z-index:1;padding:60px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
-.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);}
-@media(min-width:640px){.stats-grid{grid-template-columns:repeat(4,1fr);}}
-.stat-card{background:var(--bg);padding:40px 32px;text-align:center;}
-.stat-value{font-family:'Space Grotesk',sans-serif;font-size:clamp(36px,5vw,56px);font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
-.stat-unit{font-size:0.5em;-webkit-text-fill-color:var(--muted);vertical-align:middle;}
-.stat-label{font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:.03em;}
+      {/* Scroll indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+      >
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+          className="w-4 h-6 rounded-full border border-white/20 flex items-start justify-center pt-1"
+        >
+          <div className="w-0.5 h-2 bg-white/40 rounded-full" />
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+}
 
-/* Features */
-.features-section{position:relative;z-index:1;padding:100px 0;}
-.features-grid{display:grid;grid-template-columns:1fr;gap:16px;}
-@media(min-width:640px){.features-grid{grid-template-columns:repeat(2,1fr);}}
-@media(min-width:1024px){.features-grid{grid-template-columns:repeat(3,1fr);}}
-.feature-card{background:rgba(13,13,18,0.6);border:1px solid var(--border);border-radius:16px;padding:28px;transition:all .3s;backdrop-filter:blur(10px);}
-.feature-card:hover{border-color:rgba(139,92,246,0.25);transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.4);}
-.feature-icon-wrap{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
-.feature-icon{font-size:22px;}
-.feature-badge{display:inline-block;font-size:9.5px;letter-spacing:.12em;border-radius:6px;padding:3px 10px;border:1px solid;margin-bottom:12px;}
-.feature-title{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin-bottom:10px;}
-.feature-desc{color:var(--muted);font-size:13.5px;line-height:1.7;}
+function FeaturesSection() {
+  const { ref, inView } = useReveal();
+  return (
+    <section id="features" className="py-28 px-6 relative">
+      <div className="max-w-6xl mx-auto">
+        <motion.div
+          ref={ref}
+          variants={stagger}
+          initial="hidden"
+          animate={inView ? "visible" : "hidden"}
+          className="text-center mb-16"
+        >
+          <motion.p variants={fadeUp} className="text-xs tracking-widest uppercase text-purple-400 mb-4">Features</motion.p>
+          <motion.h2 variants={fadeUp} className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}>
+            あなたのAIが、あなたを超える
+          </motion.h2>
+          <motion.p variants={fadeUp} className="text-gray-400 max-w-xl mx-auto">
+            クラウドに頼らず、miniPCの中に「もう一人の自分」が生きています
+          </motion.p>
+        </motion.div>
 
-/* How */
-.how-section{position:relative;z-index:1;padding:100px 0;text-align:center;}
-.how-grid{display:grid;grid-template-columns:1fr;gap:24px;margin-top:52px;position:relative;}
-@media(min-width:768px){.how-grid{grid-template-columns:repeat(4,1fr);}}
-.how-card{position:relative;background:rgba(13,13,18,0.6);border:1px solid var(--border);border-radius:16px;padding:32px 24px;backdrop-filter:blur(10px);}
-.how-num{font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.15em;color:var(--accent);margin-bottom:12px;font-weight:600;}
-.how-icon{font-size:32px;margin-bottom:14px;}
-.how-title{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;margin-bottom:10px;}
-.how-desc{color:var(--muted);font-size:13px;line-height:1.7;}
-.how-arrow{display:none;position:absolute;right:-18px;top:50%;transform:translateY(-50%);color:var(--accent);font-size:20px;z-index:2;}
-@media(min-width:768px){.how-arrow{display:block;}}
+        <motion.div
+          ref={ref}
+          variants={stagger}
+          initial="hidden"
+          animate={inView ? "visible" : "hidden"}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        >
+          {FEATURES.map((f) => (
+            <motion.div
+              key={f.title}
+              variants={fadeUp}
+              whileHover={{ y: -4, scale: 1.01 }}
+              className="rounded-2xl p-8 border transition-all"
+              style={{
+                background: "rgba(13,13,18,0.8)",
+                borderColor: "rgba(255,255,255,0.07)",
+              }}
+            >
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5"
+                style={{ background: `${f.color}18`, border: `1px solid ${f.color}30` }}
+              >
+                {f.icon}
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{f.title}</h3>
+              <p className="text-gray-400 leading-relaxed text-sm">{f.desc}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
 
-/* CTA */
-.cta-section{position:relative;z-index:1;padding:80px 0 120px;}
-.cta-card{position:relative;background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(6,182,212,0.06));border:1px solid rgba(139,92,246,0.2);border-radius:24px;padding:72px 40px;text-align:center;overflow:hidden;}
-.cta-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.2;pointer-events:none;}
-.cta-orb.o1{width:400px;height:400px;background:var(--accent);top:-200px;left:-100px;}
-.cta-orb.o2{width:300px;height:300px;background:var(--accent2);bottom:-150px;right:-80px;}
-.cta-content{position:relative;z-index:1;}
-.cta-badge{display:inline-block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent3);background:rgba(244,114,182,0.1);border:1px solid rgba(244,114,182,0.3);border-radius:100px;padding:5px 18px;margin-bottom:22px;}
-.cta-h2{font-family:'Space Grotesk',sans-serif;font-size:clamp(26px,5vw,44px);font-weight:700;letter-spacing:-0.02em;line-height:1.15;margin-bottom:16px;}
-.cta-sub{color:var(--muted);font-size:15px;line-height:1.7;margin-bottom:36px;}
-.cta-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;border-radius:12px;padding:16px 44px;font-size:16px;font-weight:600;text-decoration:none;transition:all .2s;box-shadow:0 4px 24px rgba(6,182,212,0.35);}
-.cta-btn:hover{transform:translateY(-2px);box-shadow:0 10px 40px rgba(6,182,212,0.55);}
-.cta-note{margin-top:16px;font-size:12px;color:var(--muted);}
+function DemoSection() {
+  const { ref, inView } = useReveal();
+  const [visibleLines, setVisibleLines] = useState(0);
 
-/* Footer */
-.lp-footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:40px 24px;}
-.footer-inner{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:16px;}
-@media(min-width:640px){.footer-inner{flex-direction:row;justify-content:space-between;}}
-.footer-logo{display:flex;align-items:center;gap:8px;}
-.footer-copy{color:var(--muted);font-size:12px;}
-.footer-links{display:flex;gap:20px;}
-.footer-link{color:var(--muted);font-size:13px;text-decoration:none;transition:color .2s;}
-.footer-link:hover{color:var(--text);}
-`;
+  useEffect(() => {
+    if (!inView) return;
+    CONSOLE_LINES.forEach((l, i) => {
+      setTimeout(() => setVisibleLines(i + 1), l.delay * 1000 + 300);
+    });
+  }, [inView]);
+
+  return (
+    <section id="demo" className="py-28 px-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-14">
+          <p className="text-xs tracking-widest uppercase text-cyan-400 mb-4">Demo</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}>
+            AIが生きている
+          </h2>
+          <p className="text-gray-400">起動からチャットまで、全てあなたのminiPCで完結</p>
+        </div>
+
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 40 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7 }}
+          className="rounded-2xl overflow-hidden border"
+          style={{ borderColor: "rgba(255,255,255,0.08)", background: "#0a0a0f" }}
+        >
+          {/* Window bar */}
+          <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.06)", background: "#0d0d12" }}>
+            <div className="w-3 h-3 rounded-full bg-red-500/70" />
+            <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
+            <div className="w-3 h-3 rounded-full bg-green-500/70" />
+            <span className="ml-3 text-xs text-gray-600 font-mono">cocoro-console — bash</span>
+          </div>
+
+          {/* Terminal */}
+          <div className="p-6 font-mono text-sm min-h-[320px]">
+            {CONSOLE_LINES.slice(0, visibleLines).map((line, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-2 leading-relaxed"
+                style={{ color: line.color }}
+              >
+                {line.text}
+              </motion.div>
+            ))}
+            {inView && visibleLines > 0 && visibleLines < CONSOLE_LINES.length && (
+              <motion.span
+                animate={{ opacity: [1, 0, 1] }}
+                transition={{ repeat: Infinity, duration: 0.8 }}
+                className="inline-block w-2 h-4 bg-purple-400"
+              />
+            )}
+          </div>
+        </motion.div>
+
+        {/* Sub features */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+          {[
+            { icon: "💬", label: "ストリーミングチャット" },
+            { icon: "📊", label: "シンクロ率グラフ" },
+            { icon: "🧩", label: "エージェント管理" },
+            { icon: "📝", label: "記憶・感情ログ" },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-xl p-4 text-center border"
+              style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(13,13,18,0.6)" }}
+            >
+              <div className="text-2xl mb-2">{item.icon}</div>
+              <div className="text-xs text-gray-400">{item.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PricingSection() {
+  const { ref, inView } = useReveal();
+  return (
+    <section id="pricing" className="py-28 px-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-14">
+          <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#f472b6" }}>Pricing</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}>
+            シンプルな買い切りモデル
+          </h2>
+          <p className="text-gray-400">月額不要。miniPCを購入すれば、あとは永久に使い続けられます</p>
+        </div>
+
+        <motion.div
+          ref={ref}
+          variants={stagger}
+          initial="hidden"
+          animate={inView ? "visible" : "hidden"}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        >
+          {PLANS.map((plan) => (
+            <motion.div
+              key={plan.name}
+              variants={fadeUp}
+              whileHover={{ y: -6 }}
+              className="relative rounded-2xl p-8 border flex flex-col"
+              style={{
+                background: "rgba(13,13,18,0.8)",
+                borderColor: plan.badge ? plan.color + "50" : "rgba(255,255,255,0.07)",
+                boxShadow: plan.badge ? `0 0 40px ${plan.glow}` : "none",
+              }}
+            >
+              {plan.badge && (
+                <div
+                  className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold"
+                  style={{ background: `linear-gradient(135deg,${plan.color},#8b5cf6)`, color: "#fff" }}
+                >
+                  {plan.badge}
+                </div>
+              )}
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: "'Space Grotesk',sans-serif", color: plan.color }}>{plan.name}</h3>
+                <div className="text-4xl font-bold text-white mb-1" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{plan.price}</div>
+                <div className="text-xs text-gray-500">{plan.priceNote}</div>
+              </div>
+              <ul className="space-y-3 mb-8 flex-1">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-gray-300">
+                    <span style={{ color: plan.color }} className="mt-0.5 flex-shrink-0">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <button
+                className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:-translate-y-0.5"
+                style={{
+                  background: plan.badge
+                    ? `linear-gradient(135deg,${plan.color},#8b5cf6)`
+                    : "rgba(255,255,255,0.06)",
+                  color: plan.badge ? "#fff" : "#ccc",
+                  border: plan.badge ? "none" : "1px solid rgba(255,255,255,0.1)",
+                  boxShadow: plan.badge ? `0 4px 20px ${plan.glow}` : "none",
+                }}
+              >
+                {plan.cta}
+              </button>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        <p className="text-center text-xs text-gray-600 mt-8">
+          ※ 送料・設置費別途。Enterprise は別途見積もり。すべてのプランに初期設定サポートが含まれます。
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function AgentRegisterSection() {
+  const { ref, inView } = useReveal();
+  return (
+    <section id="agents" className="py-28 px-6">
+      <div className="max-w-3xl mx-auto text-center">
+        <motion.div
+          ref={ref}
+          variants={stagger}
+          initial="hidden"
+          animate={inView ? "visible" : "hidden"}
+        >
+          <motion.p variants={fadeUp} className="text-xs tracking-widest uppercase text-purple-400 mb-4">Agent Registration</motion.p>
+          <motion.h2
+            variants={fadeUp}
+            className="text-4xl md:text-5xl font-bold text-white mb-6"
+            style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}
+          >
+            専門家として<br />
+            <span style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              エージェントを登録
+            </span>
+          </motion.h2>
+          <motion.p variants={fadeUp} className="text-gray-400 mb-10 leading-relaxed">
+            弁護士・税理士・エンジニア・クリエイターとして、あなたの専門知識をAIエージェントに。
+            登録すると、他のCOCOROユーザーのminiPCで「あなたの知識」が働きます。
+          </motion.p>
+          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/register"
+              className="px-8 py-4 rounded-xl font-semibold text-white transition-all hover:-translate-y-0.5 text-sm"
+              style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 4px 24px rgba(139,92,246,0.35)" }}
+            >
+              エージェント登録フォームへ ✦
+            </Link>
+          </motion.div>
+          {/* Mini feature list */}
+          <motion.div variants={fadeUp} className="grid grid-cols-3 gap-4 mt-12 text-center">
+            {[
+              { num: "4フェーズ", label: "登録ステップ" },
+              { num: "10問", label: "価値観診断" },
+              { num: "無料", label: "エージェント登録" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl p-4 border" style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(13,13,18,0.6)" }}>
+                <div className="text-xl font-bold text-purple-400 mb-1" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{s.num}</div>
+                <div className="text-xs text-gray-500">{s.label}</div>
+              </div>
+            ))}
+          </motion.div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t py-16 px-6" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+          {/* Brand */}
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+                style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 0 16px rgba(139,92,246,0.4)" }}
+              >
+                ✦
+              </div>
+              <span className="font-bold text-white tracking-tight">COCORO OS</span>
+            </div>
+            <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
+              あなたの価値観・思考・感情を学習する、世界初のパーソナルAI人格OS。
+              手元のminiPCで完全プライベートに動作します。
+            </p>
+            <div className="flex gap-4 mt-5">
+              {[
+                { label: "X", href: "https://x.com/mdl_systems" },
+                { label: "GitHub", href: "https://github.com/mdl-systems" },
+              ].map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg text-xs text-gray-400 border border-white/10 hover:border-white/20 hover:text-white transition-colors"
+                >
+                  {s.label}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Links */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-4">プロダクト</h4>
+            <ul className="space-y-2">
+              {["特徴", "料金", "デモ", "エージェント登録"].map((l) => (
+                <li key={l}><a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">{l}</a></li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-4">会社情報</h4>
+            <ul className="space-y-2">
+              {["MDL Systems", "お問い合わせ", "プライバシーポリシー", "利用規約"].map((l) => (
+                <li key={l}><a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">{l}</a></li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <p className="text-xs text-gray-600">© 2026 MDL Systems / ANTIGRAVITY. All rights reserved.</p>
+          <p className="text-xs text-gray-600 tracking-widest">COCORO OS — Personality AI Operating System</p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+export default function HomePage() {
+  return (
+    <div className="min-h-screen text-white" style={{ background: "#060608", fontFamily: "'Inter', sans-serif" }}>
+      {/* Background orbs */}
+      <Orb style={{ width: 700, height: 700, background: "#8b5cf6", top: -200, left: -200 }} />
+      <Orb style={{ width: 500, height: 500, background: "#06b6d4", bottom: -150, right: -150 }} />
+      <Orb style={{ width: 300, height: 300, background: "#f472b6", top: "60%", left: "50%", transform: "translate(-50%,-50%)" }} />
+
+      {/* Grid */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.014) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.014) 1px,transparent 1px)",
+          backgroundSize: "60px 60px",
+        }}
+      />
+
+      <NavBar />
+
+      <main className="relative z-10">
+        <HeroSection />
+        <FeaturesSection />
+        <DemoSection />
+        <PricingSection />
+        <AgentRegisterSection />
+      </main>
+
+      <Footer />
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+        html { scroll-behavior: smooth; }
+      `}</style>
+    </div>
+  );
+}
