@@ -22,12 +22,19 @@ const STEPS = [
 ];
 
 const AGENTS = [
-  { icon: "⚖️", name: "弁護士", role: "Legal Agent", desc: "契約書レビュー・法的リスク分析・権利保護をサポート", color: "#ff69b4", glow: "rgba(255,105,180,0.25)" },
-  { icon: "📊", name: "税理士", role: "Tax Agent", desc: "確定申告・節税対策・経費管理を自動化", color: "#c084fc", glow: "rgba(192,132,252,0.25)" },
-  { icon: "💻", name: "エンジニア", role: "Code Agent", desc: "コードレビュー・バグ修正・技術選定をAIと協働", color: "#f9a8d4", glow: "rgba(249,168,212,0.25)" },
-  { icon: "🔍", name: "リサーチ", role: "Research Agent", desc: "市場調査・競合分析・トレンドレポートを自動生成", color: "#e879f9", glow: "rgba(232,121,249,0.25)" },
-  { icon: "💰", name: "FP", role: "Finance Agent", desc: "資産運用・ポートフォリオ分析・将来シミュレーション", color: "#ff69b4", glow: "rgba(255,105,180,0.25)" },
-  { icon: "🏥", name: "医療", role: "Health Agent", desc: "健康管理・症状分析・医療情報のキュレーション", color: "#c084fc", glow: "rgba(192,132,252,0.25)" },
+  { icon: "⚖️", name: "弁護士", role: "Legal Agent", desc: "契約書レビュー・法的リスク分析・権利保護をサポート", color: "#ff69b4", glow: "rgba(255,105,180,0.25)", question: "この契約書のリスクを分析して", answer: "第3条の損害賠償条項に注意が必要です。上限額の設定がなく、無制限の賠償責任を負う可能性があります。修正を推奨します。" },
+  { icon: "📊", name: "税理士", role: "Tax Agent", desc: "確定申告・節税対策・経費管理を自動化", color: "#c084fc", glow: "rgba(192,132,252,0.25)", question: "今年の節税対策を教えて", answer: "iDeCoへの拠出額を年間27.6万円に増額すると、所得税・住民税の合計で約8.3万円の節税効果が見込めます。" },
+  { icon: "💻", name: "エンジニア", role: "Code Agent", desc: "コードレビュー・バグ修正・技術選定をAIと協働", color: "#f9a8d4", glow: "rgba(249,168,212,0.25)", question: "このAPIのパフォーマンス改善策は？", answer: "N+1クエリが発生しています。JOINを使ったバッチ取得に変更すると、レスポンスタイムを87%削減できます。" },
+  { icon: "🔍", name: "リサーチ", role: "Research Agent", desc: "市場調査・競合分析・トレンドレポートを自動生成", color: "#e879f9", glow: "rgba(232,121,249,0.25)", question: "AI市場の最新トレンドをまとめて", answer: "エッジAIとオンプレミス需要が急増中。企業の63%がプライバシー懸念からローカルLLM導入を検討しています。" },
+  { icon: "💰", name: "FP", role: "Finance Agent", desc: "資産運用・ポートフォリオ分析・将来シミュレーション", color: "#ff69b4", glow: "rgba(255,105,180,0.25)", question: "老後2000万円問題、どう対策する？", answer: "月3万円をインデックス投資に回すと、30年後に約2,340万円（年利5%想定）。NISA枠を優先活用してください。" },
+  { icon: "🏥", name: "医療", role: "Health Agent", desc: "健康管理・症状分析・医療情報のキュレーション", color: "#c084fc", glow: "rgba(192,132,252,0.25)", question: "最近よく眠れないんだけど", answer: "就寝2時間前のブルーライト遮断と、室温18℃設定が効果的です。週3回の有酸素運動も睡眠質を31%向上させます。" },
+];
+
+const STATS = [
+  { num: "2,847", label: "登録ユーザー数", suffix: "人", color: "#ff69b4" },
+  { num: "194,320", label: "処理済みタスク", suffix: "件", color: "#c084fc" },
+  { num: "98.7", label: "ユーザー満足度", suffix: "%", color: "#e879f9" },
+  { num: "73.4", label: "平均シンクロ率", suffix: "%", color: "#f9a8d4" },
 ];
 
 const PLANS = [
@@ -51,8 +58,246 @@ function useReveal() {
   const inView = useInView(ref, { once: true, margin: "-80px" });
   return { ref, inView };
 }
+function useCountUp(target: number, active: boolean, duration = 1800) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    let start = 0;
+    const step = target / (duration / 16);
+    const id = setInterval(() => {
+      start = Math.min(start + step, target);
+      setVal(Math.floor(start * 10) / 10);
+      if (start >= target) clearInterval(id);
+    }, 16);
+    return () => clearInterval(id);
+  }, [active, target, duration]);
+  return val;
+}
 const fadeUp = { hidden: { opacity: 0, y: 32 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" as const } } };
 const stagger = { visible: { transition: { staggerChildren: 0.1 } } };
+
+// ─── SyncMeter ───────────────────────────────────────────────────────────────
+function SyncMeter() {
+  const [syncVal, setSyncVal] = useState(0);
+  const [label, setLabel] = useState("起動中...");
+  const labels = ["起動中...", "学習中...", "シンクロ中...", "同期完了 ✓"];
+  useEffect(() => {
+    const target = 73.4;
+    let cur = 0;
+    const id = setInterval(() => {
+      cur = Math.min(cur + 0.8, target);
+      setSyncVal(Math.floor(cur * 10) / 10);
+      const pct = cur / target;
+      if (pct < 0.3) setLabel(labels[0]);
+      else if (pct < 0.6) setLabel(labels[1]);
+      else if (pct < 0.95) setLabel(labels[2]);
+      else setLabel(labels[3]);
+      if (cur >= target) clearInterval(id);
+    }, 20);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const bars = 10;
+  const filled = Math.round((syncVal / 100) * bars);
+  return (
+    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.9, duration: 0.5 }}
+      className="inline-block mt-8 rounded-2xl px-6 py-5 text-left font-mono text-sm"
+      style={{ background: "rgba(255,105,180,0.06)", border: "1px solid rgba(255,105,180,0.2)", minWidth: 220 }}>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">🔗</span>
+        <span className="text-2xl font-bold" style={{ color: "#ff69b4", fontFamily: "'Space Grotesk',sans-serif" }}>{syncVal.toFixed(1)}%</span>
+      </div>
+      <div className="flex gap-0.5 mb-3">
+        {Array.from({ length: bars }).map((_, i) => (
+          <div key={i} className="h-2 flex-1 rounded-sm transition-all duration-100"
+            style={{ background: i < filled ? "linear-gradient(90deg,#ff69b4,#c084fc)" : "rgba(255,255,255,0.08)" }} />
+        ))}
+      </div>
+      <div className="text-xs" style={{ color: "#ff69b4" }}>{label}</div>
+    </motion.div>
+  );
+}
+
+// ─── MiniPC 3D Canvas ────────────────────────────────────────────────────────
+function MiniPC3D() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    let angle = 0;
+    let raf: number;
+    const W = 320; const H = 320;
+    canvas.width = W; canvas.height = H;
+    function project(x: number, y: number, z: number, rot: number) {
+      const cosA = Math.cos(rot); const sinA = Math.sin(rot);
+      const rx = x * cosA - z * sinA;
+      const rz = x * sinA + z * cosA;
+      const cosB = Math.cos(rot * 0.4); const sinB = Math.sin(rot * 0.4);
+      const ry2 = y * cosB - rz * sinB;
+      const rz2 = y * sinB + rz * cosB;
+      const fov = 5; const scale = W / (fov + rz2);
+      return { sx: rx * scale + W / 2, sy: ry2 * scale + H / 2 };
+    }
+    function drawFace(verts: [number,number,number][], col: string, rot: number) {
+      const pts = verts.map(([x,y,z]) => project(x,y,z,rot));
+      ctx!.beginPath();
+      ctx!.moveTo(pts[0].sx, pts[0].sy);
+      for (let i = 1; i < pts.length; i++) ctx!.lineTo(pts[i].sx, pts[i].sy);
+      ctx!.closePath();
+      ctx!.fillStyle = col;
+      ctx!.fill();
+      ctx!.strokeStyle = "rgba(255,105,180,0.3)";
+      ctx!.lineWidth = 0.8;
+      ctx!.stroke();
+    }
+    // miniPC box: 2.4 wide, 0.5 tall (thin), 1.6 deep
+    const W2=1.2, H2=0.25, D2=0.8;
+    function draw() {
+      ctx!.clearRect(0, 0, W, H);
+      const r = angle;
+      // top
+      drawFace([[-W2,H2,-D2],[W2,H2,-D2],[W2,H2,D2],[-W2,H2,D2]], "rgba(255,105,180,0.18)", r);
+      // front
+      drawFace([[-W2,-H2,D2],[W2,-H2,D2],[W2,H2,D2],[-W2,H2,D2]], "rgba(255,105,180,0.28)", r);
+      // right
+      drawFace([[W2,-H2,-D2],[W2,-H2,D2],[W2,H2,D2],[W2,H2,-D2]], "rgba(192,132,252,0.22)", r);
+      // left
+      drawFace([[-W2,-H2,D2],[-W2,-H2,-D2],[-W2,H2,-D2],[-W2,H2,D2]], "rgba(192,132,252,0.12)", r);
+      // bottom
+      drawFace([[-W2,-H2,-D2],[W2,-H2,-D2],[W2,-H2,D2],[-W2,-H2,D2]], "rgba(0,0,0,0.5)", r);
+      // back
+      drawFace([[W2,-H2,-D2],[-W2,-H2,-D2],[-W2,H2,-D2],[W2,H2,-D2]], "rgba(255,105,180,0.1)", r);
+      // LED on front face
+      const led = project(W2-0.18, H2-0.08, D2+0.001, r);
+      ctx!.beginPath(); ctx!.arc(led.sx, led.sy, 3, 0, Math.PI*2);
+      ctx!.fillStyle = `rgba(255,105,180,${0.6+0.4*Math.sin(Date.now()/400)})`;
+      ctx!.fill();
+      // glow under
+      const c = ctx!.createRadialGradient(W/2, H/2+80, 10, W/2, H/2+80, 80);
+      c.addColorStop(0, "rgba(255,105,180,0.12)"); c.addColorStop(1, "transparent");
+      ctx!.fillStyle = c; ctx!.fillRect(0, 0, W, H);
+      angle += 0.008;
+      raf = requestAnimationFrame(draw);
+    }
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return (
+    <div className="relative flex items-center justify-center">
+      <canvas ref={canvasRef} style={{ width: 320, height: 320 }} />
+      <div className="absolute bottom-6 text-xs text-center" style={{ color: "rgba(255,105,180,0.6)", fontFamily: "'Space Grotesk',sans-serif" }}>
+        COCORO Node v1.0<br />
+        <span className="text-gray-600">Ryzen 7 · 32GB · NPU</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Stats Section ────────────────────────────────────────────────────────────
+function StatsSection() {
+  const { ref, inView } = useReveal();
+  return (
+    <section id="stats" className="py-20 px-6">
+      <div className="max-w-5xl mx-auto">
+        <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}
+          className="rounded-3xl p-10 border grid grid-cols-2 md:grid-cols-4 gap-8"
+          style={{ background: "rgba(13,13,18,0.85)", borderColor: "rgba(255,105,180,0.15)", boxShadow: "0 0 60px rgba(255,105,180,0.05)" }}>
+          <motion.div variants={fadeUp} className="text-center md:col-span-4 mb-2">
+            <p className="text-xs tracking-widest uppercase" style={{ color: "#ff69b4" }}>Live Stats</p>
+            <h2 className="text-2xl font-bold text-white mt-1" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>すでに多くの人が使用中</h2>
+          </motion.div>
+          {STATS.map((s) => {
+            const n = useCountUp(parseFloat(s.num.replace(/,/g,"")), inView);
+            const disp = s.num.includes(",") ? Math.floor(n).toLocaleString() : n.toFixed(s.num.includes(".") ? 1 : 0);
+            return (
+              <motion.div key={s.label} variants={fadeUp} className="text-center">
+                <div className="text-3xl md:text-4xl font-bold mb-1" style={{ fontFamily: "'Space Grotesk',sans-serif", color: s.color }}>
+                  {disp}{s.suffix}
+                </div>
+                <div className="text-xs text-gray-500">{s.label}</div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Waitlist Section ─────────────────────────────────────────────────────────
+function WaitlistSection() {
+  const { ref, inView } = useReveal();
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle"|"loading"|"done"|"error">("idle");
+  const [errMsg, setErrMsg] = useState("");
+  const handleSubmit = async () => {
+    if (!email) return;
+    setState("loading");
+    try {
+      const res = await fetch("/api/waitlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+      const data = await res.json();
+      if (res.ok && data.success) setState("done");
+      else { setErrMsg(data.error ?? "エラーが発生しました"); setState("error"); }
+    } catch { setErrMsg("ネットワークエラーが発生しました"); setState("error"); }
+  };
+  return (
+    <section id="waitlist" className="py-28 px-6">
+      <div className="max-w-2xl mx-auto text-center">
+        <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}>
+          <motion.div variants={fadeUp} className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full border text-xs tracking-widest uppercase"
+            style={{ borderColor: "rgba(255,105,180,0.35)", background: "rgba(255,105,180,0.08)", color: "#ff69b4" }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
+            Early Access
+          </motion.div>
+          <motion.h2 variants={fadeUp} className="text-4xl md:text-5xl font-bold text-white mb-4"
+            style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}>
+            早期アクセスに<br />
+            <span style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              登録する
+            </span>
+          </motion.h2>
+          <motion.p variants={fadeUp} className="text-gray-400 mb-10 leading-relaxed">
+            リリース通知・先行割引・ベータ版アクセスを受け取る。<br />
+            登録者限定で <span style={{ color: "#ff69b4" }}>¥10,000オフ</span> のクーポンを配布予定。
+          </motion.p>
+          <motion.div variants={fadeUp}>
+            <AnimatePresence mode="wait">
+              {state === "done" ? (
+                <motion.div key="done" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                  className="rounded-2xl p-8 border text-center"
+                  style={{ background: "rgba(255,105,180,0.06)", borderColor: "rgba(255,105,180,0.3)" }}>
+                  <div className="text-4xl mb-3">✦</div>
+                  <div className="text-white font-bold text-lg mb-1" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>登録完了！</div>
+                  <div className="text-gray-400 text-sm">リリース時にご連絡します。¥10,000 オフクーポンをお送りします。</div>
+                </motion.div>
+              ) : (
+                <motion.div key="form" className="flex flex-col sm:flex-row gap-3">
+                  <input type="email" placeholder="your@email.com" value={email} onChange={e => { setEmail(e.target.value); setState("idle"); }}
+                    className="flex-1 rounded-xl px-5 py-4 text-sm outline-none"
+                    style={{ background: "rgba(13,13,18,0.9)", border: "1px solid rgba(255,105,180,0.25)", color: "#e8e8f0" }}
+                    onFocus={e => e.currentTarget.style.borderColor = "rgba(255,105,180,0.6)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "rgba(255,105,180,0.25)"}
+                    onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+                  <button onClick={handleSubmit} disabled={state === "loading" || !email}
+                    className="px-8 py-4 rounded-xl font-semibold text-white text-sm transition-all hover:-translate-y-0.5 disabled:opacity-50 whitespace-nowrap"
+                    style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 4px 20px rgba(255,105,180,0.35)" }}>
+                    {state === "loading" ? "登録中..." : "✦ 登録する"}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {state === "error" && (
+              <div className="mt-3 text-sm text-red-400" style={{ color: "#f87171" }}>{errMsg}</div>
+            )}
+            <p className="text-xs text-gray-600 mt-4">スパムはしません。いつでも解約できます。</p>
+          </motion.div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
 
 // ─── Particle Canvas ─────────────────────────────────────────────────────────
 function ParticleCanvas() {
@@ -186,6 +431,10 @@ function HeroSection() {
             </div>
           ))}
         </motion.div>
+        {/* Sync Meter */}
+        <div className="flex justify-center">
+          <SyncMeter />
+        </div>
       </motion.div>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
@@ -245,6 +494,12 @@ function HowSection() {
           </h2>
           <p className="text-gray-400">難しい設定は不要。箱から出してすぐ使えます</p>
         </div>
+        {/* 3D miniPC visual */}
+        <div className="flex justify-center mb-16">
+          <div className="rounded-3xl border p-4" style={{ background: "rgba(13,13,18,0.8)", borderColor: "rgba(255,105,180,0.15)" }}>
+            <MiniPC3D />
+          </div>
+        </div>
         <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}
           className="relative">
           {/* Connector line */}
@@ -293,27 +548,51 @@ function AgentShowcaseSection() {
         </div>
         <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {AGENTS.map((agent) => (
-            <motion.div key={agent.name} variants={fadeUp} whileHover={{ y: -6, scale: 1.02 }}
-              className="rounded-2xl p-6 border cursor-default transition-all group"
-              style={{ background: "rgba(13,13,18,0.85)", borderColor: `${agent.color}20` }}>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
-                  style={{ background: `${agent.color}12`, border: `1px solid ${agent.color}30`, boxShadow: `0 0 20px ${agent.glow}` }}>
-                  {agent.icon}
+          {AGENTS.map((agent) => {
+            const [hovered, setHovered] = useState(false);
+            return (
+              <motion.div key={agent.name} variants={fadeUp}
+                whileHover={{ y: -6, scale: 1.02 }}
+                onHoverStart={() => setHovered(true)}
+                onHoverEnd={() => setHovered(false)}
+                className="rounded-2xl p-6 border cursor-default transition-all relative overflow-hidden"
+                style={{ background: "rgba(13,13,18,0.85)", borderColor: hovered ? `${agent.color}50` : `${agent.color}20`, boxShadow: hovered ? `0 0 30px ${agent.glow}` : "none", transition: "border-color 0.3s, box-shadow 0.3s" }}>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                    style={{ background: `${agent.color}12`, border: `1px solid ${agent.color}30`, boxShadow: `0 0 20px ${agent.glow}` }}>
+                    {agent.icon}
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-lg" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{agent.name}</div>
+                    <div className="text-xs tracking-widest uppercase" style={{ color: agent.color }}>{agent.role}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-bold text-white text-lg" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{agent.name}</div>
-                  <div className="text-xs tracking-widest uppercase" style={{ color: agent.color }}>{agent.role}</div>
-                </div>
-              </div>
-              <p className="text-gray-400 text-sm leading-relaxed">{agent.desc}</p>
-              <div className="mt-4 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: agent.color }} />
-                <span className="text-xs" style={{ color: agent.color }}>稼働中</span>
-              </div>
-            </motion.div>
-          ))}
+                <AnimatePresence mode="wait">
+                  {hovered ? (
+                    <motion.div key="demo" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
+                      className="rounded-xl p-3 text-xs font-mono" style={{ background: "rgba(0,0,0,0.5)", border: `1px solid ${agent.color}25` }}>
+                      <div className="mb-2">
+                        <span style={{ color: "#9ca3af" }}>あなた: </span>
+                        <span className="text-gray-200">{agent.question}</span>
+                      </div>
+                      <div>
+                        <span style={{ color: agent.color }}>{agent.name}: </span>
+                        <span className="text-gray-300 leading-relaxed">{agent.answer}</span>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div key="desc" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <p className="text-gray-400 text-sm leading-relaxed">{agent.desc}</p>
+                      <div className="mt-4 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: agent.color }} />
+                        <span className="text-xs" style={{ color: agent.color }}>稼働中 — ホバーでデモを表示</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
     </section>
@@ -587,10 +866,12 @@ export default function HomePage() {
       <NavBar />
       <main className="relative z-10">
         <HeroSection />
+        <StatsSection />
         <FeaturesSection />
         <HowSection />
         <AgentShowcaseSection />
         <PricingSection />
+        <WaitlistSection />
         <AgentRegisterSection />
       </main>
       <Footer />
