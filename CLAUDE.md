@@ -149,3 +149,4 @@ npm start
 | 2026-03-09 | cocoro-core 連携: cocoro-sdk統合・真のSSEストリーミング実装 |
 | 2026-03-09 | DB連携: pg(node-postgres)でSNS投稿・コミュニティをPostgreSQLに永続化 |
 | 2026-03-09 | 機能追加: register→cocoro-core人格同期、Cookie JWTセッション（me/logoutエンドポイント追加）|
+| 2026-03-14 | LP全面刷新: ヒーロー(パーティクル)・特徴・仕組み(3Step)・エージェントショーケース(6種)・料金・インライン登録フォーム・ピンクアクセント統一 |

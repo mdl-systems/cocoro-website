@@ -1,111 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, useInView, useScroll, useTransform, AnimatePresence } from "framer-motion";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-interface PricePlan {
-  name: string;
-  price: string;
-  priceNote: string;
-  color: string;
-  glow: string;
-  badge?: string;
-  features: string[];
-  cta: string;
-}
+interface Particle { x: number; y: number; vx: number; vy: number; size: number; alpha: number; }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 const FEATURES = [
-  {
-    icon: "🧠",
-    title: "人格OS",
-    desc: "Boot Wizardで40問に答えるだけ。あなたの価値観・思考パターン・感情モデルをAIが学習し、会話するたびに成長します。",
-    color: "#8b5cf6",
-  },
-  {
-    icon: "🔒",
-    title: "完全プライベート",
-    desc: "クラウド不要。データは手元のminiPCにのみ保存。インターネット接続なしで動作し、あなたの思考が外部に渡ることはありません。",
-    color: "#06b6d4",
-  },
-  {
-    icon: "🤖",
-    title: "専門家チーム",
-    desc: "弁護士・税理士・エンジニア・クリエイター。あなただけのAI専門家チームがminiPCで24時間稼働します。",
-    color: "#f472b6",
-  },
-  {
-    icon: "🔗",
-    title: "シンクロ率",
-    desc: "AIとの共鳴度をリアルタイムで可視化。会話を重ねるほどシンクロ率が上昇し、AIがあなた以上にあなたを知っていきます。",
-    color: "#34d399",
-  },
+  { icon: "🧠", title: "人格OS", desc: "Boot Wizard 40問に答えるだけ。あなたの価値観・思考パターン・感情モデルをAIが学習し、会話するたびに成長します。", color: "#ff69b4" },
+  { icon: "🔒", title: "完全プライベート", desc: "クラウド不要。データは手元のminiPCにのみ保存。インターネット接続なしで動作し、あなたの思考が外部に渡ることはありません。", color: "#c084fc" },
+  { icon: "🤖", title: "専門家チーム", desc: "弁護士・税理士・エンジニア・クリエイター。あなただけのAI専門家チームがminiPCで24時間稼働します。", color: "#f9a8d4" },
+  { icon: "🔗", title: "シンクロ率", desc: "AIとの共鳴度をリアルタイムで可視化。会話を重ねるほどシンクロ率が上昇し、AIがあなた以上にあなたを知っていきます。", color: "#e879f9" },
 ];
 
-const PLANS: PricePlan[] = [
-  {
-    name: "Starter",
-    price: "¥49,800",
-    priceNote: "買い切り（ハードウェア込み）",
-    color: "#8b5cf6",
-    glow: "rgba(139,92,246,0.3)",
-    features: [
-      "miniPC（Ryzen 5 / 16GB RAM / 512GB SSD）",
-      "cocoro-OS インストール済み",
-      "基本AIアシスタント",
-      "記憶・感情エンジン",
-      "Boot Wizard（40問人格診断）",
-      "メールサポート",
-    ],
-    cta: "Starterを購入",
-  },
-  {
-    name: "Pro",
-    price: "¥89,800",
-    priceNote: "買い切り（ハードウェア込み）",
-    color: "#06b6d4",
-    glow: "rgba(6,182,212,0.3)",
-    badge: "人気",
-    features: [
-      "miniPC（Ryzen 7 / 32GB RAM / 1TB NVMe）",
-      "cocoro-OS インストール済み",
-      "全専門AIエージェント（弁護士・税理士・エンジニア等）",
-      "多人格チーム管理",
-      "シンクロ率ダッシュボード",
-      "優先サポート＋オンボーディング",
-    ],
-    cta: "Proを購入",
-  },
-  {
-    name: "Enterprise",
-    price: "要相談",
-    priceNote: "カスタム見積もり",
-    color: "#f472b6",
-    glow: "rgba(244,114,182,0.3)",
-    features: [
-      "複数ノード構成（チーム・組織向け）",
-      "カスタムエージェント開発",
-      "専用サポートエンジニア",
-      "SLA保証",
-      "オンプレミス導入支援",
-      "API連携・カスタム統合",
-    ],
-    cta: "お問い合わせ",
-  },
+const STEPS = [
+  { num: "01", icon: "📦", title: "miniPCにインストール", desc: "COCORO OSをminiPCに焼くだけ。自動セットアップで5分で起動します。", color: "#ff69b4" },
+  { num: "02", icon: "🧠", title: "Boot Wizardで人格設定", desc: "40問の対話を通じてAIがあなたの価値観・思考・感情を深く学習します。", color: "#c084fc" },
+  { num: "03", icon: "💬", title: "AIと会話・タスク実行", desc: "チャット、タスク自動化、専門家エージェントとの協働が即日スタート。", color: "#f9a8d4" },
 ];
 
-const CONSOLE_LINES = [
-  { delay: 0, text: "$ cocoro boot", color: "#8b5cf6" },
-  { delay: 0.4, text: "✦ cocoro-OS v1.0.0 starting...", color: "#e8e8f0" },
-  { delay: 0.9, text: "✓ PersonalityEngine initialized", color: "#34d399" },
-  { delay: 1.3, text: "✓ MemoryEngine online (42 memories)", color: "#34d399" },
-  { delay: 1.7, text: "✓ EmotionAdapter calibrated", color: "#34d399" },
-  { delay: 2.1, text: "✓ 6 agents ready [law, tax, code, ...]", color: "#34d399" },
-  { delay: 2.6, text: "── Sync Rate: 73.4% ──────────────", color: "#06b6d4" },
-  { delay: 3.1, text: "> You: 「明日の打ち合わせの準備して」", color: "#e8e8f0" },
-  { delay: 3.7, text: "COCORO: 承知しました。アジェンダを作成します...", color: "#8b5cf6" },
+const AGENTS = [
+  { icon: "⚖️", name: "弁護士", role: "Legal Agent", desc: "契約書レビュー・法的リスク分析・権利保護をサポート", color: "#ff69b4", glow: "rgba(255,105,180,0.25)" },
+  { icon: "📊", name: "税理士", role: "Tax Agent", desc: "確定申告・節税対策・経費管理を自動化", color: "#c084fc", glow: "rgba(192,132,252,0.25)" },
+  { icon: "💻", name: "エンジニア", role: "Code Agent", desc: "コードレビュー・バグ修正・技術選定をAIと協働", color: "#f9a8d4", glow: "rgba(249,168,212,0.25)" },
+  { icon: "🔍", name: "リサーチ", role: "Research Agent", desc: "市場調査・競合分析・トレンドレポートを自動生成", color: "#e879f9", glow: "rgba(232,121,249,0.25)" },
+  { icon: "💰", name: "FP", role: "Finance Agent", desc: "資産運用・ポートフォリオ分析・将来シミュレーション", color: "#ff69b4", glow: "rgba(255,105,180,0.25)" },
+  { icon: "🏥", name: "医療", role: "Health Agent", desc: "健康管理・症状分析・医療情報のキュレーション", color: "#c084fc", glow: "rgba(192,132,252,0.25)" },
+];
+
+const PLANS = [
+  { name: "Starter", price: "¥49,800", note: "買い切り（ハードウェア込み）", color: "#ff69b4", glow: "rgba(255,105,180,0.3)", features: ["miniPC（Ryzen 5 / 16GB / 512GB）", "COCORO OS インストール済み", "基本AIアシスタント", "記憶・感情エンジン", "Boot Wizard（40問）", "メールサポート"], cta: "Starterを購入" },
+  { name: "Pro", price: "¥89,800", note: "買い切り（ハードウェア込み）", color: "#c084fc", glow: "rgba(192,132,252,0.3)", badge: "人気", features: ["miniPC（Ryzen 7 / 32GB / 1TB NVMe）", "COCORO OS インストール済み", "全専門AIエージェント 6種", "多人格チーム管理", "シンクロ率ダッシュボード", "優先サポート＋オンボーディング"], cta: "Proを購入" },
+  { name: "Enterprise", price: "要相談", note: "カスタム見積もり", color: "#e879f9", glow: "rgba(232,121,249,0.3)", features: ["複数ノード構成（チーム・組織向け）", "カスタムエージェント開発", "専用サポートエンジニア", "SLA保証", "オンプレミス導入支援", "API連携・カスタム統合"], cta: "お問い合わせ" },
+];
+
+// Quiz data for inline registration form
+const QUIZ = [
+  { id: "q1", q: "品質とスピードが対立した場合、どちらを優先しますか？", opts: ["品質（確実性重視）", "スピード（効率性重視）", "状況による"] },
+  { id: "q2", q: "成功確率30%の大きな挑戦。取り組みますか？", opts: ["取り組む（挑戦重視）", "見送る（安全重視）", "条件次第"] },
+  { id: "q3", q: "80%の確信があれば意思決定しますか？", opts: ["する", "しない（95%必要）", "領域による"] },
+  { id: "q4", q: "ルールと結果が矛盾する場合、どちらを優先しますか？", opts: ["ルール（原則重視）", "結果（実利重視）", "ケースバイケース"] },
+  { id: "q5", q: "問題に直面した時、最初にすることは？", opts: ["データを集める", "直感で仮説を立てる", "関係者に相談する"] },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -114,26 +51,64 @@ function useReveal() {
   const inView = useInView(ref, { once: true, margin: "-80px" });
   return { ref, inView };
 }
+const fadeUp = { hidden: { opacity: 0, y: 32 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" as const } } };
+const stagger = { visible: { transition: { staggerChildren: 0.1 } } };
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 32 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
-};
-
-const stagger = {
-  visible: { transition: { staggerChildren: 0.12 } },
-};
-
-// ─── Components ──────────────────────────────────────────────────────────────
-function Orb({ style }: { style: React.CSSProperties }) {
-  return (
-    <div
-      className="pointer-events-none fixed rounded-full"
-      style={{ filter: "blur(140px)", opacity: 0.12, zIndex: 0, ...style }}
-    />
-  );
+// ─── Particle Canvas ─────────────────────────────────────────────────────────
+function ParticleCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    let raf: number;
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    resize();
+    window.addEventListener("resize", resize);
+    const COUNT = 80;
+    const particles: Particle[] = Array.from({ length: COUNT }, () => ({
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+      size: Math.random() * 1.5 + 0.5, alpha: Math.random() * 0.5 + 0.1,
+    }));
+    const colors = ["#ff69b4", "#c084fc", "#f9a8d4", "#e879f9"];
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p, i) => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.globalAlpha = p.alpha;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        // Draw connections
+        particles.slice(i + 1, i + 5).forEach(p2 => {
+          const dx = p.x - p2.x; const dy = p.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = "#ff69b4";
+            ctx.globalAlpha = (1 - dist / 120) * 0.08;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        });
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+  }, []);
+  return <canvas ref={canvasRef} className="pointer-events-none fixed inset-0 z-0" style={{ opacity: 0.6 }} />;
 }
 
+// ─── NavBar ───────────────────────────────────────────────────────────────────
 function NavBar() {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -141,163 +116,96 @@ function NavBar() {
     window.addEventListener("scroll", fn);
     return () => window.removeEventListener("scroll", fn);
   }, []);
-
   return (
-    <motion.nav
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
+    <motion.nav initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}
       className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-12"
-      style={{
-        background: scrolled ? "rgba(6,6,8,0.88)" : "transparent",
-        backdropFilter: scrolled ? "blur(24px)" : "none",
-        borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "none",
-        transition: "all 0.3s ease",
-      }}
-    >
+      style={{ background: scrolled ? "rgba(6,6,8,0.92)" : "transparent", backdropFilter: scrolled ? "blur(24px)" : "none", borderBottom: scrolled ? "1px solid rgba(255,105,180,0.1)" : "none", transition: "all 0.3s ease" }}>
       <div className="flex items-center gap-2">
-        <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center text-base font-bold"
-          style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 0 16px rgba(139,92,246,0.4)" }}
-        >
-          ✦
-        </div>
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base font-bold"
+          style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 0 16px rgba(255,105,180,0.4)" }}>✦</div>
         <span className="font-bold text-white tracking-tight">COCORO OS</span>
       </div>
       <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
-        <a href="#features" className="hover:text-white transition-colors">特徴</a>
-        <a href="#demo" className="hover:text-white transition-colors">デモ</a>
-        <a href="#pricing" className="hover:text-white transition-colors">料金</a>
-        <a href="#agents" className="hover:text-white transition-colors">エージェント登録</a>
+        {[["#features","特徴"],["#how","仕組み"],["#agents-showcase","エージェント"],["#pricing","料金"],["#register","登録"]].map(([href,label])=>(
+          <a key={href} href={href} className="hover:text-white transition-colors hover:text-pink-400">{label}</a>
+        ))}
       </div>
       <div className="flex items-center gap-3">
         <Link href="/login" className="text-sm text-gray-400 hover:text-white transition-colors">ログイン</Link>
-        <Link
-          href="/register"
-          className="text-sm font-medium px-4 py-2 rounded-lg transition-all"
-          style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 0 16px rgba(139,92,246,0.3)" }}
-        >
+        <a href="#register" className="text-sm font-medium px-4 py-2 rounded-lg transition-all"
+          style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 0 16px rgba(255,105,180,0.35)" }}>
           始める
-        </Link>
+        </a>
       </div>
     </motion.nav>
   );
 }
 
+// ─── Hero ─────────────────────────────────────────────────────────────────────
 function HeroSection() {
   const { scrollYProgress } = useScroll();
   const y = useTransform(scrollYProgress, [0, 0.3], [0, -60]);
-
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-24 pb-20 overflow-hidden">
       <motion.div style={{ y }} className="relative z-10 max-w-4xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
           className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full border text-xs tracking-widest uppercase"
-          style={{ borderColor: "rgba(139,92,246,0.35)", background: "rgba(139,92,246,0.08)", color: "#8b5cf6" }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+          style={{ borderColor: "rgba(255,105,180,0.35)", background: "rgba(255,105,180,0.08)", color: "#ff69b4" }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
           Personality AI Operating System
         </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.15 }}
+        <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.15 }}
           className="text-5xl md:text-7xl font-bold tracking-tight leading-tight mb-6"
-          style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.03em" }}
-        >
+          style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.03em" }}>
           あなただけの<br />
-          <span style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4,#f472b6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <span style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc,#e879f9)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             AI人格OS
           </span>
         </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed"
-        >
+        <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
+          className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
           miniPCで動く、完全プライベートなAIアシスタント。<br />
           あなたの価値観・思考・感情を学習し、会話するたびに成長します。
         </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.45 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center"
-        >
-          <Link
-            href="/register"
-            className="px-8 py-4 rounded-xl font-semibold text-white text-base transition-all hover:-translate-y-0.5"
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 4px 28px rgba(139,92,246,0.4)" }}
-          >
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.45 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="#register" className="px-8 py-4 rounded-xl font-semibold text-white text-base transition-all hover:-translate-y-0.5"
+            style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 4px 28px rgba(255,105,180,0.4)" }}>
             今すぐ始める ✦
-          </Link>
-          <a
-            href="#demo"
-            className="px-8 py-4 rounded-xl font-semibold text-gray-300 text-base border border-white/10 hover:border-white/20 hover:text-white transition-all"
-          >
+          </a>
+          <a href="#how" className="px-8 py-4 rounded-xl font-semibold text-gray-300 text-base border border-white/10 hover:border-pink-500/30 hover:text-white transition-all">
             デモを見る →
           </a>
         </motion.div>
-
-        {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.7 }}
-          className="flex justify-center gap-12 mt-16 text-center"
-        >
-          {[
-            { num: "40問", label: "人格診断" },
-            { num: "32次元", label: "価値観ベクター" },
-            { num: "100%", label: "オンプレミス" },
-          ].map((s) => (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.7 }}
+          className="flex justify-center gap-12 mt-16 text-center">
+          {[{ num: "40問", label: "人格診断" }, { num: "32次元", label: "価値観ベクター" }, { num: "100%", label: "オンプレミス" }].map((s) => (
             <div key={s.label}>
-              <div className="text-2xl font-bold text-white mb-1" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{s.num}</div>
+              <div className="text-2xl font-bold mb-1" style={{ fontFamily: "'Space Grotesk',sans-serif", color: "#ff69b4" }}>{s.num}</div>
               <div className="text-xs text-gray-500 tracking-widest uppercase">{s.label}</div>
             </div>
           ))}
         </motion.div>
       </motion.div>
-
-      {/* Scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-      >
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
-          className="w-4 h-6 rounded-full border border-white/20 flex items-start justify-center pt-1"
-        >
-          <div className="w-0.5 h-2 bg-white/40 rounded-full" />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+        <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+          className="w-4 h-6 rounded-full border border-pink-500/30 flex items-start justify-center pt-1">
+          <div className="w-0.5 h-2 bg-pink-400/40 rounded-full" />
         </motion.div>
       </motion.div>
     </section>
   );
 }
 
+// ─── Features ─────────────────────────────────────────────────────────────────
 function FeaturesSection() {
   const { ref, inView } = useReveal();
   return (
     <section id="features" className="py-28 px-6 relative">
       <div className="max-w-6xl mx-auto">
-        <motion.div
-          ref={ref}
-          variants={stagger}
-          initial="hidden"
-          animate={inView ? "visible" : "hidden"}
-          className="text-center mb-16"
-        >
-          <motion.p variants={fadeUp} className="text-xs tracking-widest uppercase text-purple-400 mb-4">Features</motion.p>
+        <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"} className="text-center mb-16">
+          <motion.p variants={fadeUp} className="text-xs tracking-widest uppercase mb-4" style={{ color: "#ff69b4" }}>Features</motion.p>
           <motion.h2 variants={fadeUp} className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}>
             あなたのAIが、あなたを超える
           </motion.h2>
@@ -305,33 +213,17 @@ function FeaturesSection() {
             クラウドに頼らず、miniPCの中に「もう一人の自分」が生きています
           </motion.p>
         </motion.div>
-
-        <motion.div
-          ref={ref}
-          variants={stagger}
-          initial="hidden"
-          animate={inView ? "visible" : "hidden"}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6"
-        >
+        <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {FEATURES.map((f) => (
-            <motion.div
-              key={f.title}
-              variants={fadeUp}
-              whileHover={{ y: -4, scale: 1.01 }}
+            <motion.div key={f.title} variants={fadeUp} whileHover={{ y: -4, scale: 1.01 }}
               className="rounded-2xl p-8 border transition-all"
-              style={{
-                background: "rgba(13,13,18,0.8)",
-                borderColor: "rgba(255,255,255,0.07)",
-              }}
-            >
-              <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5"
-                style={{ background: `${f.color}18`, border: `1px solid ${f.color}30` }}
-              >
-                {f.icon}
-              </div>
+              style={{ background: "rgba(13,13,18,0.8)", borderColor: `${f.color}20` }}>
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5"
+                style={{ background: `${f.color}15`, border: `1px solid ${f.color}30` }}>{f.icon}</div>
               <h3 className="text-xl font-bold text-white mb-3" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{f.title}</h3>
               <p className="text-gray-400 leading-relaxed text-sm">{f.desc}</p>
+              <div className="mt-4 h-0.5 rounded-full" style={{ background: `linear-gradient(90deg,${f.color}40,transparent)` }} />
             </motion.div>
           ))}
         </motion.div>
@@ -340,281 +232,334 @@ function FeaturesSection() {
   );
 }
 
-function DemoSection() {
+// ─── How It Works ─────────────────────────────────────────────────────────────
+function HowSection() {
   const { ref, inView } = useReveal();
-  const [visibleLines, setVisibleLines] = useState(0);
-
-  useEffect(() => {
-    if (!inView) return;
-    CONSOLE_LINES.forEach((l, i) => {
-      setTimeout(() => setVisibleLines(i + 1), l.delay * 1000 + 300);
-    });
-  }, [inView]);
-
   return (
-    <section id="demo" className="py-28 px-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-14">
-          <p className="text-xs tracking-widest uppercase text-cyan-400 mb-4">Demo</p>
+    <section id="how" className="py-28 px-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-16">
+          <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#c084fc" }}>How It Works</p>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}>
-            AIが生きている
+            3ステップで始まる
           </h2>
-          <p className="text-gray-400">起動からチャットまで、全てあなたのminiPCで完結</p>
+          <p className="text-gray-400">難しい設定は不要。箱から出してすぐ使えます</p>
         </div>
-
-        <motion.div
-          ref={ref}
-          initial={{ opacity: 0, y: 40 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7 }}
-          className="rounded-2xl overflow-hidden border"
-          style={{ borderColor: "rgba(255,255,255,0.08)", background: "#0a0a0f" }}
-        >
-          {/* Window bar */}
-          <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.06)", background: "#0d0d12" }}>
-            <div className="w-3 h-3 rounded-full bg-red-500/70" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
-            <div className="w-3 h-3 rounded-full bg-green-500/70" />
-            <span className="ml-3 text-xs text-gray-600 font-mono">cocoro-console — bash</span>
-          </div>
-
-          {/* Terminal */}
-          <div className="p-6 font-mono text-sm min-h-[320px]">
-            {CONSOLE_LINES.slice(0, visibleLines).map((line, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mb-2 leading-relaxed"
-                style={{ color: line.color }}
-              >
-                {line.text}
+        <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}
+          className="relative">
+          {/* Connector line */}
+          <div className="hidden md:block absolute top-16 left-1/2 -translate-x-1/2 w-px h-[calc(100%-128px)]"
+            style={{ background: "linear-gradient(180deg,#ff69b4,#c084fc,#e879f9)", opacity: 0.2 }} />
+          <div className="flex flex-col gap-8">
+            {STEPS.map((step, i) => (
+              <motion.div key={step.num} variants={fadeUp}
+                className={`flex flex-col md:flex-row items-center gap-8 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}>
+                <div className="flex-1 flex justify-center">
+                  <motion.div whileHover={{ scale: 1.04 }}
+                    className="relative rounded-2xl p-8 border max-w-sm w-full"
+                    style={{ background: "rgba(13,13,18,0.9)", borderColor: `${step.color}25`, boxShadow: `0 0 40px ${step.color}10` }}>
+                    <div className="text-4xl mb-4">{step.icon}</div>
+                    <div className="text-xs tracking-widest uppercase mb-2" style={{ color: step.color }}>Step {step.num}</div>
+                    <h3 className="text-xl font-bold text-white mb-3" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{step.title}</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">{step.desc}</p>
+                  </motion.div>
+                </div>
+                <div className="hidden md:flex w-16 h-16 rounded-full items-center justify-center text-2xl font-bold flex-shrink-0"
+                  style={{ background: `${step.color}15`, border: `2px solid ${step.color}40`, color: step.color, fontFamily: "'Space Grotesk',sans-serif" }}>
+                  {step.num}
+                </div>
+                <div className="flex-1" />
               </motion.div>
             ))}
-            {inView && visibleLines > 0 && visibleLines < CONSOLE_LINES.length && (
-              <motion.span
-                animate={{ opacity: [1, 0, 1] }}
-                transition={{ repeat: Infinity, duration: 0.8 }}
-                className="inline-block w-2 h-4 bg-purple-400"
-              />
-            )}
           </div>
         </motion.div>
-
-        {/* Sub features */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-          {[
-            { icon: "💬", label: "ストリーミングチャット" },
-            { icon: "📊", label: "シンクロ率グラフ" },
-            { icon: "🧩", label: "エージェント管理" },
-            { icon: "📝", label: "記憶・感情ログ" },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="rounded-xl p-4 text-center border"
-              style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(13,13,18,0.6)" }}
-            >
-              <div className="text-2xl mb-2">{item.icon}</div>
-              <div className="text-xs text-gray-400">{item.label}</div>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );
 }
 
+// ─── Agent Showcase ───────────────────────────────────────────────────────────
+function AgentShowcaseSection() {
+  const { ref, inView } = useReveal();
+  return (
+    <section id="agents-showcase" className="py-28 px-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#e879f9" }}>Agent Showcase</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}>
+            あなただけの専門家チーム
+          </h2>
+          <p className="text-gray-400">6種の専門AIエージェントがminiPCで24時間稼働</p>
+        </div>
+        <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {AGENTS.map((agent) => (
+            <motion.div key={agent.name} variants={fadeUp} whileHover={{ y: -6, scale: 1.02 }}
+              className="rounded-2xl p-6 border cursor-default transition-all group"
+              style={{ background: "rgba(13,13,18,0.85)", borderColor: `${agent.color}20` }}>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                  style={{ background: `${agent.color}12`, border: `1px solid ${agent.color}30`, boxShadow: `0 0 20px ${agent.glow}` }}>
+                  {agent.icon}
+                </div>
+                <div>
+                  <div className="font-bold text-white text-lg" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{agent.name}</div>
+                  <div className="text-xs tracking-widest uppercase" style={{ color: agent.color }}>{agent.role}</div>
+                </div>
+              </div>
+              <p className="text-gray-400 text-sm leading-relaxed">{agent.desc}</p>
+              <div className="mt-4 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: agent.color }} />
+                <span className="text-xs" style={{ color: agent.color }}>稼働中</span>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Pricing ─────────────────────────────────────────────────────────────────
 function PricingSection() {
   const { ref, inView } = useReveal();
   return (
     <section id="pricing" className="py-28 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-14">
-          <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#f472b6" }}>Pricing</p>
+          <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#f9a8d4" }}>Pricing</p>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}>
             シンプルな買い切りモデル
           </h2>
           <p className="text-gray-400">月額不要。miniPCを購入すれば、あとは永久に使い続けられます</p>
         </div>
-
-        <motion.div
-          ref={ref}
-          variants={stagger}
-          initial="hidden"
-          animate={inView ? "visible" : "hidden"}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
-        >
+        <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((plan) => (
-            <motion.div
-              key={plan.name}
-              variants={fadeUp}
-              whileHover={{ y: -6 }}
+            <motion.div key={plan.name} variants={fadeUp} whileHover={{ y: -6 }}
               className="relative rounded-2xl p-8 border flex flex-col"
-              style={{
-                background: "rgba(13,13,18,0.8)",
-                borderColor: plan.badge ? plan.color + "50" : "rgba(255,255,255,0.07)",
-                boxShadow: plan.badge ? `0 0 40px ${plan.glow}` : "none",
-              }}
-            >
+              style={{ background: "rgba(13,13,18,0.85)", borderColor: plan.badge ? `${plan.color}50` : "rgba(255,255,255,0.07)", boxShadow: plan.badge ? `0 0 40px ${plan.glow}` : "none" }}>
               {plan.badge && (
-                <div
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold"
-                  style={{ background: `linear-gradient(135deg,${plan.color},#8b5cf6)`, color: "#fff" }}
-                >
-                  {plan.badge}
-                </div>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold"
+                  style={{ background: `linear-gradient(135deg,${plan.color},#c084fc)`, color: "#fff" }}>{plan.badge}</div>
               )}
               <div className="mb-6">
-                <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: "'Space Grotesk',sans-serif", color: plan.color }}>{plan.name}</h3>
+                <h3 className="text-xl font-bold mb-2" style={{ fontFamily: "'Space Grotesk',sans-serif", color: plan.color }}>{plan.name}</h3>
                 <div className="text-4xl font-bold text-white mb-1" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{plan.price}</div>
-                <div className="text-xs text-gray-500">{plan.priceNote}</div>
+                <div className="text-xs text-gray-500">{plan.note}</div>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-300">
-                    <span style={{ color: plan.color }} className="mt-0.5 flex-shrink-0">✓</span>
-                    {f}
+                    <span style={{ color: plan.color }} className="mt-0.5 flex-shrink-0">✓</span>{f}
                   </li>
                 ))}
               </ul>
-              <button
-                className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:-translate-y-0.5"
-                style={{
-                  background: plan.badge
-                    ? `linear-gradient(135deg,${plan.color},#8b5cf6)`
-                    : "rgba(255,255,255,0.06)",
-                  color: plan.badge ? "#fff" : "#ccc",
-                  border: plan.badge ? "none" : "1px solid rgba(255,255,255,0.1)",
-                  boxShadow: plan.badge ? `0 4px 20px ${plan.glow}` : "none",
-                }}
-              >
+              <button className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:-translate-y-0.5"
+                style={{ background: plan.badge ? `linear-gradient(135deg,${plan.color},#c084fc)` : "rgba(255,255,255,0.06)", color: plan.badge ? "#fff" : "#ccc", border: plan.badge ? "none" : "1px solid rgba(255,255,255,0.1)", boxShadow: plan.badge ? `0 4px 20px ${plan.glow}` : "none" }}>
                 {plan.cta}
               </button>
             </motion.div>
           ))}
         </motion.div>
-
-        <p className="text-center text-xs text-gray-600 mt-8">
-          ※ 送料・設置費別途。Enterprise は別途見積もり。すべてのプランに初期設定サポートが含まれます。
-        </p>
+        <p className="text-center text-xs text-gray-600 mt-8">※ 送料・設置費別途。Enterprise は別途見積もり。すべてのプランに初期設定サポートが含まれます。</p>
       </div>
     </section>
   );
 }
 
+// ─── Agent Register Section (inline form) ────────────────────────────────────
 function AgentRegisterSection() {
   const { ref, inView } = useReveal();
+  const [step, setStep] = useState<"intro" | "form" | "done">("intro");
+  const [name, setName] = useState(""); const [email, setEmail] = useState("");
+  const [job, setJob] = useState(""); const [mission, setMission] = useState("");
+  const [quiz, setQuiz] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
+  const answered = Object.keys(quiz).filter(k => quiz[k] !== "").length;
+  const handleQuiz = useCallback((id: string, val: string) => setQuiz(q => ({ ...q, [id]: val })), []);
+
+  const handleSubmit = async () => {
+    if (!name || !email || !job || !mission || answered < 5) { setErr("すべての項目を入力してください"); return; }
+    setLoading(true); setErr("");
+    try {
+      const res = await fetch("/api/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fullname: name, nickname: name, email, job, location: "-", quiz, tone: "丁寧", density: "2", mission, blood: "A", receptivity: "50", sns_x: "", sns_instagram: "" }) });
+      if (res.ok) setStep("done");
+      else setErr("送信に失敗しました。再度お試しください。");
+    } catch { setErr("ネットワークエラーが発生しました。"); }
+    setLoading(false);
+  };
+
   return (
-    <section id="agents" className="py-28 px-6">
-      <div className="max-w-3xl mx-auto text-center">
-        <motion.div
-          ref={ref}
-          variants={stagger}
-          initial="hidden"
-          animate={inView ? "visible" : "hidden"}
-        >
-          <motion.p variants={fadeUp} className="text-xs tracking-widest uppercase text-purple-400 mb-4">Agent Registration</motion.p>
-          <motion.h2
-            variants={fadeUp}
-            className="text-4xl md:text-5xl font-bold text-white mb-6"
-            style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}
-          >
+    <section id="register" className="py-28 px-6">
+      <div className="max-w-3xl mx-auto">
+        <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}>
+          <motion.p variants={fadeUp} className="text-xs tracking-widest uppercase text-center mb-4" style={{ color: "#ff69b4" }}>Agent Registration</motion.p>
+          <motion.h2 variants={fadeUp} className="text-4xl md:text-5xl font-bold text-white text-center mb-4" style={{ fontFamily: "'Space Grotesk',sans-serif", letterSpacing: "-0.02em" }}>
             専門家として<br />
-            <span style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            <span style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               エージェントを登録
             </span>
           </motion.h2>
-          <motion.p variants={fadeUp} className="text-gray-400 mb-10 leading-relaxed">
-            弁護士・税理士・エンジニア・クリエイターとして、あなたの専門知識をAIエージェントに。
+          <motion.p variants={fadeUp} className="text-gray-400 text-center mb-10 leading-relaxed">
+            弁護士・税理士・エンジニアとして、あなたの専門知識をAIエージェントに。<br />
             登録すると、他のCOCOROユーザーのminiPCで「あなたの知識」が働きます。
           </motion.p>
-          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/register"
-              className="px-8 py-4 rounded-xl font-semibold text-white transition-all hover:-translate-y-0.5 text-sm"
-              style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 4px 24px rgba(139,92,246,0.35)" }}
-            >
-              エージェント登録フォームへ ✦
-            </Link>
-          </motion.div>
-          {/* Mini feature list */}
-          <motion.div variants={fadeUp} className="grid grid-cols-3 gap-4 mt-12 text-center">
-            {[
-              { num: "4フェーズ", label: "登録ステップ" },
-              { num: "10問", label: "価値観診断" },
-              { num: "無料", label: "エージェント登録" },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl p-4 border" style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(13,13,18,0.6)" }}>
-                <div className="text-xl font-bold text-purple-400 mb-1" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{s.num}</div>
-                <div className="text-xs text-gray-500">{s.label}</div>
-              </div>
-            ))}
-          </motion.div>
+
+          <AnimatePresence mode="wait">
+            {step === "intro" && (
+              <motion.div key="intro" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+                className="rounded-2xl p-8 border text-center"
+                style={{ background: "rgba(13,13,18,0.9)", borderColor: "rgba(255,105,180,0.2)" }}>
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                  {[{ num: "4フェーズ", label: "登録ステップ" }, { num: "10問", label: "価値観診断" }, { num: "無料", label: "エージェント登録" }].map((s) => (
+                    <div key={s.label} className="rounded-xl p-4 border" style={{ border: "1px solid rgba(255,105,180,0.15)", background: "rgba(255,105,180,0.05)" }}>
+                      <div className="text-xl font-bold mb-1" style={{ color: "#ff69b4", fontFamily: "'Space Grotesk',sans-serif" }}>{s.num}</div>
+                      <div className="text-xs text-gray-500">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button onClick={() => setStep("form")}
+                    className="px-8 py-4 rounded-xl font-semibold text-white transition-all hover:-translate-y-0.5 text-sm"
+                    style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 4px 24px rgba(255,105,180,0.35)" }}>
+                    簡易登録フォームへ ✦
+                  </button>
+                  <Link href="/register"
+                    className="px-8 py-4 rounded-xl font-semibold text-gray-300 text-sm border border-white/10 hover:border-pink-500/30 hover:text-white transition-all">
+                    フル登録フォームへ →
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+
+            {step === "form" && (
+              <motion.div key="form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                {/* Basic info */}
+                <div className="rounded-2xl p-6 border mb-4" style={{ background: "rgba(13,13,18,0.9)", borderColor: "rgba(255,105,180,0.15)" }}>
+                  <div className="text-xs tracking-widest uppercase mb-4" style={{ color: "#ff69b4" }}>基本情報</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    {[{ placeholder: "氏名 / ニックネーム", val: name, set: setName }, { placeholder: "メールアドレス", val: email, set: setEmail }].map((f, i) => (
+                      <input key={i} type={i === 1 ? "email" : "text"} placeholder={f.placeholder} value={f.val} onChange={e => f.set(e.target.value)}
+                        className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
+                        style={{ background: "#13131c", border: "1px solid rgba(255,255,255,0.08)", color: "#e8e8f0" }}
+                        onFocus={e => e.currentTarget.style.borderColor = "rgba(255,105,180,0.5)"}
+                        onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"} />
+                    ))}
+                  </div>
+                  <input type="text" placeholder="専門職 / 職業（例：弁護士、エンジニア）" value={job} onChange={e => setJob(e.target.value)}
+                    className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all mb-4"
+                    style={{ background: "#13131c", border: "1px solid rgba(255,255,255,0.08)", color: "#e8e8f0" }}
+                    onFocus={e => e.currentTarget.style.borderColor = "rgba(255,105,180,0.5)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"} />
+                  <textarea placeholder="エージェントのミッション（例：法的リスクを最小化し、クライアントを守る）" value={mission} onChange={e => setMission(e.target.value)} rows={3}
+                    className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all resize-none"
+                    style={{ background: "#13131c", border: "1px solid rgba(255,255,255,0.08)", color: "#e8e8f0" }}
+                    onFocus={e => e.currentTarget.style.borderColor = "rgba(255,105,180,0.5)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"} />
+                </div>
+
+                {/* Mini quiz */}
+                <div className="rounded-2xl p-6 border mb-4" style={{ background: "rgba(13,13,18,0.9)", borderColor: "rgba(192,132,252,0.15)" }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-xs tracking-widest uppercase" style={{ color: "#c084fc" }}>価値観診断（5問）</div>
+                    <div className="text-xs text-gray-500">{answered} / 5</div>
+                  </div>
+                  <div className="w-full h-1 rounded-full mb-5" style={{ background: "#13131c" }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${answered * 20}%`, background: "linear-gradient(90deg,#ff69b4,#c084fc)" }} />
+                  </div>
+                  <div className="space-y-4">
+                    {QUIZ.map(q => (
+                      <div key={q.id} className="p-4 rounded-xl" style={{ background: "#0d0d12", border: "1px solid rgba(255,255,255,0.06)" }}>
+                        <div className="text-sm text-gray-300 mb-3" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{q.q}</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {q.opts.map((opt, vi) => (
+                            <label key={vi} className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-xs transition-all"
+                              style={{ background: quiz[q.id] === String(vi) ? "rgba(255,105,180,0.15)" : "rgba(255,255,255,0.03)", border: `1px solid ${quiz[q.id] === String(vi) ? "rgba(255,105,180,0.4)" : "rgba(255,255,255,0.07)"}`, color: quiz[q.id] === String(vi) ? "#ff69b4" : "#9ca3af" }}>
+                              <input type="radio" name={q.id} className="hidden" onChange={() => handleQuiz(q.id, String(vi))} />
+                              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: quiz[q.id] === String(vi) ? "#ff69b4" : "rgba(255,255,255,0.1)" }} />
+                              {opt}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {err && <div className="mb-4 p-3 rounded-xl text-sm text-red-400" style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)" }}>{err}</div>}
+
+                <div className="flex gap-3">
+                  <button onClick={() => setStep("intro")} className="px-6 py-3 rounded-xl text-sm text-gray-400 border border-white/10 hover:border-white/20 transition-all">← 戻る</button>
+                  <button onClick={handleSubmit} disabled={loading}
+                    className="flex-1 py-3 rounded-xl font-semibold text-white text-sm transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 4px 20px rgba(255,105,180,0.3)" }}>
+                    {loading ? "送信中…" : "✦ 分身を起動する"}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === "done" && (
+              <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                className="rounded-2xl p-12 border text-center"
+                style={{ background: "rgba(13,13,18,0.9)", borderColor: "rgba(255,105,180,0.3)", boxShadow: "0 0 60px rgba(255,105,180,0.1)" }}>
+                <div className="text-6xl mb-6">✦</div>
+                <h3 className="text-3xl font-bold text-white mb-4" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>起動完了</h3>
+                <p className="text-gray-400 mb-2">あなたのデジタル分身の学習が始まります。</p>
+                <p className="text-gray-400">24時間以内に確認メールをお送りします。</p>
+                <div className="mt-8 text-xs text-gray-600 tracking-widest">COCORO OS — by ANTIGRAVITY</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </section>
   );
 }
 
+// ─── Footer ───────────────────────────────────────────────────────────────────
 function Footer() {
   return (
-    <footer className="border-t py-16 px-6" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+    <footer className="border-t py-16 px-6" style={{ borderColor: "rgba(255,105,180,0.08)" }}>
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-          {/* Brand */}
           <div className="md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
-                style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", boxShadow: "0 0 16px rgba(139,92,246,0.4)" }}
-              >
-                ✦
-              </div>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
+                style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 0 16px rgba(255,105,180,0.4)" }}>✦</div>
               <span className="font-bold text-white tracking-tight">COCORO OS</span>
             </div>
             <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
-              あなたの価値観・思考・感情を学習する、世界初のパーソナルAI人格OS。
-              手元のminiPCで完全プライベートに動作します。
+              あなたの価値観・思考・感情を学習する、世界初のパーソナルAI人格OS。手元のminiPCで完全プライベートに動作します。
             </p>
             <div className="flex gap-4 mt-5">
-              {[
-                { label: "X", href: "https://x.com/mdl_systems" },
-                { label: "GitHub", href: "https://github.com/mdl-systems" },
-              ].map((s) => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-lg text-xs text-gray-400 border border-white/10 hover:border-white/20 hover:text-white transition-colors"
-                >
-                  {s.label}
-                </a>
+              {[{ label: "X", href: "https://x.com/mdl_systems" }, { label: "GitHub", href: "https://github.com/mdl-systems" }].map((s) => (
+                <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg text-xs text-gray-400 border border-white/10 hover:border-pink-500/30 hover:text-white transition-colors">{s.label}</a>
               ))}
             </div>
           </div>
-
-          {/* Links */}
           <div>
             <h4 className="text-sm font-semibold text-white mb-4">プロダクト</h4>
             <ul className="space-y-2">
-              {["特徴", "料金", "デモ", "エージェント登録"].map((l) => (
-                <li key={l}><a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">{l}</a></li>
+              {[["#features","特徴"],["#how","仕組み"],["#agents-showcase","エージェント"],["#pricing","料金"],["#register","事前登録"]].map(([href,label])=>(
+                <li key={label}><a href={href} className="text-sm text-gray-500 hover:text-pink-400 transition-colors">{label}</a></li>
               ))}
             </ul>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white mb-4">会社情報</h4>
             <ul className="space-y-2">
-              {["MDL Systems", "お問い合わせ", "プライバシーポリシー", "利用規約"].map((l) => (
-                <li key={l}><a href="#" className="text-sm text-gray-500 hover:text-white transition-colors">{l}</a></li>
+              {["MDL Systems","お問い合わせ","プライバシーポリシー","利用規約"].map((l)=>(
+                <li key={l}><a href="#" className="text-sm text-gray-500 hover:text-pink-400 transition-colors">{l}</a></li>
               ))}
             </ul>
           </div>
         </div>
-
-        <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4" style={{ borderColor: "rgba(255,105,180,0.08)" }}>
           <p className="text-xs text-gray-600">© 2026 MDL Systems / ANTIGRAVITY. All rights reserved.</p>
           <p className="text-xs text-gray-600 tracking-widest">COCORO OS — Personality AI Operating System</p>
         </div>
@@ -626,36 +571,36 @@ function Footer() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   return (
-    <div className="min-h-screen text-white" style={{ background: "#060608", fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen text-white" style={{ background: "#0a0a0a", fontFamily: "'Inter', sans-serif" }}>
+      {/* Particles */}
+      <ParticleCanvas />
+
       {/* Background orbs */}
-      <Orb style={{ width: 700, height: 700, background: "#8b5cf6", top: -200, left: -200 }} />
-      <Orb style={{ width: 500, height: 500, background: "#06b6d4", bottom: -150, right: -150 }} />
-      <Orb style={{ width: 300, height: 300, background: "#f472b6", top: "60%", left: "50%", transform: "translate(-50%,-50%)" }} />
+      <div className="pointer-events-none fixed rounded-full" style={{ width: 700, height: 700, background: "#ff69b4", top: -200, left: -200, filter: "blur(160px)", opacity: 0.06, zIndex: 0 }} />
+      <div className="pointer-events-none fixed rounded-full" style={{ width: 500, height: 500, background: "#c084fc", bottom: -150, right: -150, filter: "blur(140px)", opacity: 0.06, zIndex: 0 }} />
+      <div className="pointer-events-none fixed rounded-full" style={{ width: 300, height: 300, background: "#e879f9", top: "60%", left: "50%", transform: "translate(-50%,-50%)", filter: "blur(120px)", opacity: 0.05, zIndex: 0 }} />
 
       {/* Grid */}
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.014) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.014) 1px,transparent 1px)",
-          backgroundSize: "60px 60px",
-        }}
-      />
+      <div className="pointer-events-none fixed inset-0 z-0"
+        style={{ backgroundImage: "linear-gradient(rgba(255,105,180,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,105,180,0.018) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
 
       <NavBar />
-
       <main className="relative z-10">
         <HeroSection />
         <FeaturesSection />
-        <DemoSection />
+        <HowSection />
+        <AgentShowcaseSection />
         <PricingSection />
         <AgentRegisterSection />
       </main>
-
       <Footer />
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
         html { scroll-behavior: smooth; }
+        * { box-sizing: border-box; }
+        input, textarea { font-family: 'Inter', sans-serif; }
+        input::placeholder, textarea::placeholder { color: #4b5563; }
       `}</style>
     </div>
   );
