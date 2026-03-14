@@ -151,3 +151,5 @@ npm start
 | 2026-03-09 | 機能追加: register→cocoro-core人格同期、Cookie JWTセッション（me/logoutエンドポイント追加）|
 | 2026-03-14 | LP全面刷新: ヒーロー(パーティクル)・特徴・仕組み(3Step)・エージェントショーケース(6種)・料金・インライン登録フォーム・ピンクアクセント統一 |
 | 2026-03-14 | LP動的要素追加: シンクロ率メーター・エージェントデモカード(ホバー)・3D miniPC(Canvas WebGL)・導入実績カウントアップ・ウェイトリスト(POST /api/waitlist) |
+| 2026-03-14 | 本番デプロイ準備: vercel.json・SEO(OGP/Twitter Card/JSON-LD/robots)・GA4・OGP画像・ページ別metadata・.env.example整理 |
+
