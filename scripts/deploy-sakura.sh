@@ -24,40 +24,9 @@ npm run build
 # ─── Step 2: .htaccess を out/ に配置 ────────────────────────────────────────
 echo ""
 echo "Creating .htaccess..."
-cat > out/.htaccess << 'HTEOF'
-Options -Indexes
-RewriteEngine On
-RewriteBase /
+cp "$(dirname "$0")/.htaccess" out/.htaccess
+echo "✓ .htaccess placed in out/"
 
-# 実ファイルが存在する場合はそのまま配信
-RewriteRule ^index\.html$ - [L]
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-
-# その他は index.html にルーティング（SPAのため）
-RewriteRule . /index.html [L]
-
-# ─── Cache Headers ───────────────────────────────────────────────────────────
-<IfModule mod_headers.c>
-    <FilesMatch "\.(js|css|woff2|woff|ttf|svg)$">
-        Header set Cache-Control "public, max-age=31536000, immutable"
-    </FilesMatch>
-    <FilesMatch "\.(png|jpg|jpeg|gif|ico|webp)$">
-        Header set Cache-Control "public, max-age=2592000"
-    </FilesMatch>
-    <FilesMatch "\.html$">
-        Header set Cache-Control "public, max-age=0, must-revalidate"
-    </FilesMatch>
-    Header always set X-Content-Type-Options "nosniff"
-    Header always set X-Frame-Options "DENY"
-</IfModule>
-
-# ─── Gzip ────────────────────────────────────────────────────────────────────
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/css application/javascript image/svg+xml
-</IfModule>
-HTEOF
-echo "✓ .htaccess created in out/"
 
 # ─── Step 3: Deploy via rsync ────────────────────────────────────────────────
 echo ""
