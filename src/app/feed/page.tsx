@@ -44,8 +44,11 @@ const TRENDING = [
     { tag: "#ペアプロAI", count: "612件の投稿" },
 ];
 
-// cocoro-agentのURL (Next.js APIルート経由でプロキシ)
-const AGENT_URL = "/api/agent-task";
+// cocoro-agentのURL (静的ホスティング時は NEXT_PUBLIC_API_URL を使用)
+const AGENT_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL.replace(/:8001$/, ":8002")}/tasks`
+  : null; // nullの場合はデモモード
+
 
 // ─── AIタスク進捗表示 ────────────────────────────────────
 interface AgentTaskPanelProps {
@@ -83,6 +86,12 @@ function AgentTaskPanel({ onPostCreated }: AgentTaskPanelProps) {
         setProgress(0);
         setResult(null);
 
+        // AGENT_URLがnullの場合はデモモードに直進
+        if (!AGENT_URL) {
+            pollProgress("demo-" + Date.now());
+            return;
+        }
+
         try {
             const res = await fetch(AGENT_URL, {
                 method: "POST",
@@ -112,42 +121,44 @@ function AgentTaskPanel({ onPostCreated }: AgentTaskPanelProps) {
         ];
 
         pollRef.current = setInterval(async () => {
-            // まずcocoro-agentに実際の状態を確認
-            try {
-                const res = await fetch(`${AGENT_URL}?task_id=${id}`);
-                const data = await res.json();
+            // AGENT_URLが有効な場合のみAPIポーリング
+            if (AGENT_URL && !id.startsWith("demo-")) {
+                try {
+                    const res = await fetch(`${AGENT_URL}?task_id=${id}`);
+                    const data = await res.json();
 
-                if (data.status === "running" && data.current_step) {
-                    setSteps(prev => {
-                        const last = prev[prev.length - 1];
-                        if (!last || last.step !== data.current_step) {
-                            return [...prev, { step: data.current_step, progress: data.progress ?? 50 }];
-                        }
-                        return prev;
-                    });
-                    setProgress(data.progress ?? 50);
-                }
+                    if (data.status === "running" && data.current_step) {
+                        setSteps(prev => {
+                            const last = prev[prev.length - 1];
+                            if (!last || last.step !== data.current_step) {
+                                return [...prev, { step: data.current_step, progress: data.progress ?? 50 }];
+                            }
+                            return prev;
+                        });
+                        setProgress(data.progress ?? 50);
+                    }
 
-                if (data.status === "completed") {
-                    clearInterval(pollRef.current!);
-                    setProgress(100);
-                    const r = data.result;
-                    const summary = typeof r === "object"
-                        ? (r?.summary ?? r?.details ?? JSON.stringify(r))
-                        : String(r ?? "タスクが完了しました。");
-                    setResult(summary);
-                    setPhase("done");
-                    setRunning(false);
-                    return;
-                }
+                    if (data.status === "completed") {
+                        clearInterval(pollRef.current!);
+                        setProgress(100);
+                        const r = data.result;
+                        const summary = typeof r === "object"
+                            ? (r?.summary ?? r?.details ?? JSON.stringify(r))
+                            : String(r ?? "タスクが完了しました。");
+                        setResult(summary);
+                        setPhase("done");
+                        setRunning(false);
+                        return;
+                    }
 
-                if (data.status === "failed") {
-                    clearInterval(pollRef.current!);
-                    setPhase("error");
-                    setRunning(false);
-                    return;
-                }
-            } catch { /* サイレント */ }
+                    if (data.status === "failed") {
+                        clearInterval(pollRef.current!);
+                        setPhase("error");
+                        setRunning(false);
+                        return;
+                    }
+                } catch { /* サイレント */ }
+            }
 
             // fallback: デモアニメーション
             if (tick < DEMO_STEPS.length) {

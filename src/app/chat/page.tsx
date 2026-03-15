@@ -148,80 +148,66 @@ export default function ChatPage() {
         setInput("");
         setIsTyping(true);
 
-        // ── SSEストリーミング試行（cocoro-core 有効時）──────────────────
-        const streamUrl = `/api/chat?message=${encodeURIComponent(sentInput)}&session_id=web-${activePersona}`;
-        const streamRes = await fetch(streamUrl).catch(() => null);
+        // ── 外部 cocoro-core への SSE ストリーミング試行 ────────────────────
+        const COCORO_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+        if (COCORO_URL) {
+            const streamUrl = `${COCORO_URL}/chat/stream?message=${encodeURIComponent(sentInput)}&session_id=web-${activePersona}`;
+            const streamRes = await fetch(streamUrl).catch(() => null);
 
-        if (streamRes?.ok && streamRes.body) {
-            // SSE逐次受信
-            const streamId = Date.now() + 1;
-            setMessages(prev => [...prev, {
-                id: streamId, role: "assistant", content: "", timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
-            }]);
-
-            const reader = streamRes.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = "";
-            let accumulated = "";
-
-            try {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split("\n");
-                    buffer = lines.pop() ?? "";
-                    for (const line of lines) {
-                        if (!line.startsWith("data: ")) continue;
-                        const raw = line.slice(6).trim();
-                        if (raw === "[DONE]") break;
-                        try {
-                            const parsed = JSON.parse(raw);
-                            if (parsed.error) throw new Error(parsed.error);
-                            if (typeof parsed.text === "string") {
-                                accumulated += parsed.text;
-                                setMessages(prev => prev.map(m => m.id === streamId ? { ...m, content: accumulated } : m));
-                            }
-                        } catch { /* ignore parse errors */ }
+            if (streamRes?.ok && streamRes.body) {
+                const streamId = Date.now() + 1;
+                setMessages(prev => [...prev, {
+                    id: streamId, role: "assistant", content: "",
+                    timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
+                }]);
+                const reader = streamRes.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+                let accumulated = "";
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split("\n");
+                        buffer = lines.pop() ?? "";
+                        for (const line of lines) {
+                            if (!line.startsWith("data: ")) continue;
+                            const raw = line.slice(6).trim();
+                            if (raw === "[DONE]") break;
+                            try {
+                                const parsed = JSON.parse(raw);
+                                if (typeof parsed.text === "string") {
+                                    accumulated += parsed.text;
+                                    setMessages(prev => prev.map(m => m.id === streamId ? { ...m, content: accumulated } : m));
+                                }
+                            } catch { /* ignore */ }
+                        }
                     }
+                } catch {
+                    setMessages(prev => prev.map(m => m.id === streamId ? { ...m, content: accumulated || "⚠️ ストリームエラーが発生しました。" } : m));
+                } finally {
+                    setIsTyping(false);
                 }
-            } catch {
-                setMessages(prev => prev.map(m => m.id === streamId ? { ...m, content: accumulated || "⚠️ ストリームエラーが発生しました。" } : m));
-            } finally {
-                setIsTyping(false);
+                return;
             }
-            return;
         }
 
-        // ── POST フォールバック（OpenAI / Mock）──────────────────────────
-        try {
-            const res = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    message: sentInput,
-                    persona: personas[activePersona].name,
-                }),
-            });
-            const data = await res.json();
-            const aiMsg: Message = {
-                id: Date.now() + 1,
-                role: "assistant",
-                content: data.response || "応答を取得できませんでした。",
-                timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
-            };
-            setMessages(prev => [...prev, aiMsg]);
-        } catch {
-            setMessages(prev => [...prev, {
-                id: Date.now() + 1,
-                role: "assistant",
-                content: "⚠️ 通信エラーが発生しました。しばらくしてから再度お試しください。",
-                timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
-            }]);
-        } finally {
-            setIsTyping(false);
-        }
+        // ── デモフォールバック（静的ホスティング / cocoro-core未接続時）──────
+        await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+        const DEMO_REPLIES: Record<string, string> = {
+            default: `「${sentInput.slice(0, 20)}...」について考えてみました。\n\nCOCORO OSでは、あなたの思考パターンを学習した専用のAIエージェントが、より深く・より正確に回答します。\n\n⚡ miniPCをセットアップすると、完全プライベートなAIチャットが利用できます。`,
+        };
+        const aiMsg: Message = {
+            id: Date.now() + 1,
+            role: "assistant",
+            content: DEMO_REPLIES.default,
+            timestamp: new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }),
+        };
+        setMessages(prev => [...prev, aiMsg]);
+        setIsTyping(false);
     };
+
 
 
 
