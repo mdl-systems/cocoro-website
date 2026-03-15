@@ -154,6 +154,8 @@ npm start
 | 2026-03-14 | 本番デプロイ準備: vercel.json・SEO(OGP/Twitter Card/JSON-LD/robots)・GA4・OGP画像・ページ別metadata・.env.example整理 |
 | 2026-03-15 | さくらサーバーデプロイ設定: standalone出力・ecosystem.config.js(PM2)・deploy.sh(rsync自動化)・nginx設定(HTTPS/SSE/静的配信) |
 | 2026-03-15 | 静的エクスポート対応(FreeBSD/Apache): output:export・APIルート退避(_api_server/)・AppShell/Chat/Feed静的化・.htaccess・deploy-sakura.sh |
+| 2026-03-15 | scripts/deploy-sakura.sh: mdl-japan@www3398.sakura.ne.jp への正式デプロイスクリプト(ビルド→.htaccess生成→rsync) |
+
 
 
 
