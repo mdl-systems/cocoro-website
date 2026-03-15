@@ -4,13 +4,13 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # 手動実行も可能
+  workflow_dispatch:
 
 jobs:
   deploy:
-    name: Build & Deploy
+    name: Build & Deploy to さくら
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       # ─── 1. チェックアウト ──────────────────────────────────────────────
@@ -29,45 +29,106 @@ jobs:
         run: npm ci
 
       # ─── 4. 静的ビルド ───────────────────────────────────────────────────
+      # NEXT_PUBLIC_API_URL は公開サーバーのURL（LAN IPは外部から不達なので注意）
       - name: Build static export
         run: npm run build
         env:
           NEXT_PUBLIC_SITE_URL: https://cocoro-os.com
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_TELEMETRY_DISABLED: 1
 
       # ─── 5. .htaccess 配置 ───────────────────────────────────────────────
       - name: Place .htaccess
         run: cp scripts/.htaccess out/.htaccess
 
-      # ─── 6. SSH秘密鍵セットアップ ───────────────────────────────────────
-      - name: Setup SSH key
+      # ─── 6. SSH セットアップ（改行コード保持版）──────────────────────────
+      # GitHub Secrets に登録するSSH秘密鍵のフォーマット:
+      #   cat ~/.ssh/id_ed25519 | pbcopy  (macOS)
+      #   または git bash: cat ~/.ssh/id_ed25519 | clip
+      - name: Setup SSH
+        env:
+          SAKURA_SSH_KEY: ${{ secrets.SAKURA_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SAKURA_SSH_KEY }}" > ~/.ssh/sakura_key
-          chmod 600 ~/.ssh/sakura_key
-          ssh-keyscan -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts 2>/dev/null
+          chmod 700 ~/.ssh
 
-      # ─── 7. リモートディレクトリ作成 ────────────────────────────────────
+          # printf を使って改行コードを保持（echo だと失われる場合がある）
+          printf '%s\n' "${SAKURA_SSH_KEY}" > ~/.ssh/sakura_key
+          chmod 600 ~/.ssh/sakura_key
+
+          # 鍵の形式確認（デバッグ用・内容は出力しない）
+          ssh-keygen -l -f ~/.ssh/sakura_key && echo "✓ SSH key valid" || echo "✗ SSH key invalid"
+
+          # known_hosts に さくらを登録（exit code 255 対策の主要修正）
+          ssh-keyscan -T 30 -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts 2>/dev/null && \
+            echo "✓ known_hosts registered" || \
+            echo "⚠ ssh-keyscan failed, trying with IP..."
+          # IPでも試みる（DNS解決失敗時のフォールバック）
+          SAKURA_IP=$(dig +short www3398.sakura.ne.jp | head -1)
+          [ -n "$SAKURA_IP" ] && ssh-keyscan -T 30 -H "$SAKURA_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod 644 ~/.ssh/known_hosts
+
+      # ─── 7. SSH接続テスト ────────────────────────────────────────────────
+      - name: Test SSH connection
+        run: |
+          ssh \
+            -i ~/.ssh/sakura_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=30 \
+            -o ServerAliveInterval=15 \
+            -o BatchMode=yes \
+            mdl-japan@www3398.sakura.ne.jp \
+            'echo "SSH_OK: $(uname -s) $(uname -r)"'
+
+      # ─── 8. リモートディレクトリ作成 ────────────────────────────────────
       - name: Ensure remote directory
         run: |
-          ssh -i ~/.ssh/sakura_key \
+          ssh \
+            -i ~/.ssh/sakura_key \
             -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=30 \
             mdl-japan@www3398.sakura.ne.jp \
-            'mkdir -p ~/www/cocoro-os'
+            'mkdir -p ~/www/cocoro-os && echo "DIR_OK: $(ls -la ~/www/cocoro-os | wc -l) files"'
 
-      # ─── 8. rsync デプロイ ───────────────────────────────────────────────
+      # ─── 9. rsync デプロイ ───────────────────────────────────────────────
+      # FreeBSD(さくら共有サーバー)でrsyncが使えない場合は scp にフォールバック
       - name: Deploy via rsync
+        id: rsync
+        continue-on-error: true
         run: |
           rsync -avz --delete \
-            -e "ssh -i ~/.ssh/sakura_key -o StrictHostKeyChecking=no" \
+            -e "ssh -i ~/.ssh/sakura_key -o StrictHostKeyChecking=no -o ConnectTimeout=30" \
             --exclude ".DS_Store" \
+            --checksum \
             out/ \
             mdl-japan@www3398.sakura.ne.jp:~/www/cocoro-os/
+        timeout-minutes: 10
 
-      # ─── 9. デプロイ完了通知 ────────────────────────────────────────────
+      # rsync 失敗時は tar+scp フォールバック
+      - name: Deploy via scp (fallback)
+        if: steps.rsync.outcome == 'failure'
+        run: |
+          echo "⚠ rsync failed, falling back to scp..."
+          tar -czf /tmp/cocoro-deploy.tar.gz -C out .
+          scp \
+            -i ~/.ssh/sakura_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=30 \
+            /tmp/cocoro-deploy.tar.gz \
+            mdl-japan@www3398.sakura.ne.jp:~/
+          ssh \
+            -i ~/.ssh/sakura_key \
+            -o StrictHostKeyChecking=no \
+            mdl-japan@www3398.sakura.ne.jp \
+            'cd ~/www/cocoro-os && tar -xzf ~/cocoro-deploy.tar.gz --overwrite && rm ~/cocoro-deploy.tar.gz && echo "SCP_DEPLOY_OK"'
+
+      # ─── 10. デプロイ完了サマリー ─────────────────────────────────────
       - name: Deployment summary
         run: |
-          echo "✦ Deployed to https://cocoro-os.com"
-          echo "  Commit: ${{ github.sha }}"
-          echo "  Branch: ${{ github.ref_name }}"
+          FILE_COUNT=$(find out -type f | wc -l)
+          echo "## ✦ Deploy Complete" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **URL** | https://cocoro-os.com |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Files** | ${FILE_COUNT} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
