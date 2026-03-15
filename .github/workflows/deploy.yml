@@ -34,10 +34,15 @@ jobs:
       - name: Place .htaccess
         run: cp scripts/.htaccess out/.htaccess
 
+      - name: Debug secrets
+        run: |
+          echo "SAKURA_SSH_PRIVATE_KEY exists: ${{ secrets.SAKURA_SSH_PRIVATE_KEY != '' }}"
+
       - name: Setup SSH Agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SAKURA_SSH_PRIVATE_KEY }}
+
 
       - name: Add known hosts
         run: ssh-keyscan -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts
