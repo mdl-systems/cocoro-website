@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, useInView, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import CocoroLogo from "@/components/CocoroLogo";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Particle { x: number; y: number; vx: number; vy: number; size: number; alpha: number; }
@@ -366,8 +367,7 @@ function NavBar() {
       className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-12"
       style={{ background: scrolled ? "rgba(6,6,8,0.92)" : "transparent", backdropFilter: scrolled ? "blur(24px)" : "none", borderBottom: scrolled ? "1px solid rgba(255,105,180,0.1)" : "none", transition: "all 0.3s ease" }}>
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base font-bold"
-          style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 0 16px rgba(255,105,180,0.4)" }}>✦</div>
+        <CocoroLogo size={32} variant="square" glow />
         <span className="font-bold text-white tracking-tight">COCORO OS</span>
       </div>
       <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
@@ -811,8 +811,7 @@ function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           <div className="md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base"
-                style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 0 16px rgba(255,105,180,0.4)" }}>✦</div>
+              <CocoroLogo size={32} variant="square" glow />
               <span className="font-bold text-white tracking-tight">COCORO OS</span>
             </div>
             <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
