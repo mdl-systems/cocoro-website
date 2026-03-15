@@ -199,7 +199,7 @@ function MiniPC3D() {
 function StatsSection() {
   const { ref, inView } = useReveal();
   return (
-    <section id="stats" className="py-20 px-6">
+    <section id="stats" className="py-20" style={{ padding: "5rem clamp(1rem, 5vw, 3rem)" }}>
       <div className="max-w-5xl mx-auto">
         <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}
           className="rounded-3xl p-10 border grid grid-cols-2 md:grid-cols-4 gap-8"
@@ -243,7 +243,7 @@ function WaitlistSection() {
     } catch { setErrMsg("ネットワークエラーが発生しました"); setState("error"); }
   };
   return (
-    <section id="waitlist" className="py-28 px-6">
+    <section id="waitlist" className="py-28" style={{ padding: "7rem clamp(1rem, 5vw, 3rem)" }}>
       <div className="max-w-2xl mx-auto text-center">
         <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}>
           <motion.div variants={fadeUp} className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full border text-xs tracking-widest uppercase"
@@ -273,15 +273,15 @@ function WaitlistSection() {
                   <div className="text-gray-400 text-sm">リリース時にご連絡します。¥10,000 オフクーポンをお送りします。</div>
                 </motion.div>
               ) : (
-                <motion.div key="form" className="flex flex-col sm:flex-row gap-3">
+                <motion.div key="form" className="flex flex-col sm:flex-row gap-3 w-full">
                   <input type="email" placeholder="your@email.com" value={email} onChange={e => { setEmail(e.target.value); setState("idle"); }}
-                    className="flex-1 rounded-xl px-5 py-4 text-sm outline-none"
-                    style={{ background: "rgba(13,13,18,0.9)", border: "1px solid rgba(255,105,180,0.25)", color: "#e8e8f0" }}
+                    className="rounded-xl px-5 py-4 text-sm outline-none"
+                    style={{ flex: "1 1 auto", minWidth: 0, width: "100%", background: "rgba(13,13,18,0.9)", border: "1px solid rgba(255,105,180,0.25)", color: "#e8e8f0" }}
                     onFocus={e => e.currentTarget.style.borderColor = "rgba(255,105,180,0.6)"}
                     onBlur={e => e.currentTarget.style.borderColor = "rgba(255,105,180,0.25)"}
                     onKeyDown={e => e.key === "Enter" && handleSubmit()} />
                   <button onClick={handleSubmit} disabled={state === "loading" || !email}
-                    className="px-8 py-4 rounded-xl font-semibold text-white text-sm transition-all hover:-translate-y-0.5 disabled:opacity-50 whitespace-nowrap"
+                    className="px-8 py-4 rounded-xl font-semibold text-white text-sm transition-all hover:-translate-y-0.5 disabled:opacity-50 whitespace-nowrap flex-shrink-0"
                     style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 4px 20px rgba(255,105,180,0.35)" }}>
                     {state === "loading" ? "登録中..." : "✦ 登録する"}
                   </button>
@@ -391,7 +391,7 @@ function HeroSection() {
   const { scrollYProgress } = useScroll();
   const y = useTransform(scrollYProgress, [0, 0.3], [0, -60]);
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-24 pb-20 overflow-hidden">
+    <section className="relative min-h-screen flex flex-col items-center justify-center text-center overflow-hidden" style={{ paddingTop: "clamp(5rem, 12vw, 8rem)", paddingBottom: "5rem", paddingLeft: "clamp(1rem, 5vw, 3rem)", paddingRight: "clamp(1rem, 5vw, 3rem)" }}>
       <motion.div style={{ y }} className="relative z-10 max-w-4xl mx-auto">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
           className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full border text-xs tracking-widest uppercase"
@@ -451,7 +451,7 @@ function HeroSection() {
 function FeaturesSection() {
   const { ref, inView } = useReveal();
   return (
-    <section id="features" className="py-28 px-6 relative">
+    <section id="features" className="py-28 relative" style={{ padding: "7rem clamp(1rem, 5vw, 3rem)" }}>
       <div className="max-w-6xl mx-auto">
         <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"} className="text-center mb-16">
           <motion.p variants={fadeUp} className="text-xs tracking-widest uppercase mb-4" style={{ color: "#ff69b4" }}>Features</motion.p>
@@ -485,7 +485,7 @@ function FeaturesSection() {
 function HowSection() {
   const { ref, inView } = useReveal();
   return (
-    <section id="how" className="py-28 px-6">
+    <section id="how" className="py-28" style={{ padding: "7rem clamp(1rem, 5vw, 3rem)" }}>
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#c084fc" }}>How It Works</p>
@@ -501,32 +501,36 @@ function HowSection() {
           </div>
         </div>
         <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}
-          className="relative">
-          {/* Connector line */}
-          <div className="hidden md:block absolute top-16 left-1/2 -translate-x-1/2 w-px h-[calc(100%-128px)]"
-            style={{ background: "linear-gradient(180deg,#ff69b4,#c084fc,#e879f9)", opacity: 0.2 }} />
-          <div className="flex flex-col gap-8">
-            {STEPS.map((step, i) => (
-              <motion.div key={step.num} variants={fadeUp}
-                className={`flex flex-col md:flex-row items-center gap-8 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}>
-                <div className="flex-1 flex justify-center">
-                  <motion.div whileHover={{ scale: 1.04 }}
-                    className="relative rounded-2xl p-8 border max-w-sm w-full"
-                    style={{ background: "rgba(13,13,18,0.9)", borderColor: `${step.color}25`, boxShadow: `0 0 40px ${step.color}10` }}>
-                    <div className="text-4xl mb-4">{step.icon}</div>
-                    <div className="text-xs tracking-widest uppercase mb-2" style={{ color: step.color }}>Step {step.num}</div>
-                    <h3 className="text-xl font-bold text-white mb-3" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{step.title}</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">{step.desc}</p>
-                  </motion.div>
-                </div>
-                <div className="hidden md:flex w-16 h-16 rounded-full items-center justify-center text-2xl font-bold flex-shrink-0"
-                  style={{ background: `${step.color}15`, border: `2px solid ${step.color}40`, color: step.color, fontFamily: "'Space Grotesk',sans-serif" }}>
-                  {step.num}
-                </div>
-                <div className="flex-1" />
-              </motion.div>
-            ))}
-          </div>
+          className="flex flex-col gap-8">
+          {STEPS.map((step, i) => (
+            <motion.div key={step.num} variants={fadeUp}
+              className={`flex flex-col md:flex-row items-center gap-6 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}>
+              {/* Step number circle */}
+              <div className="hidden md:flex w-16 h-16 rounded-full items-center justify-center text-xl font-bold flex-shrink-0"
+                style={{ background: `${step.color}15`, border: `2px solid ${step.color}40`, color: step.color, fontFamily: "'Space Grotesk',sans-serif" }}>
+                {step.num}
+              </div>
+              {/* Card */}
+              <div className="flex-1 min-w-0">
+                <motion.div whileHover={{ scale: 1.02 }}
+                  className="rounded-2xl p-8 border w-full"
+                  style={{ background: "rgba(13,13,18,0.9)", borderColor: `${step.color}25`, boxShadow: `0 0 40px ${step.color}10` }}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="md:hidden w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                      style={{ background: `${step.color}15`, border: `2px solid ${step.color}40`, color: step.color }}>
+                      {step.num}
+                    </div>
+                    <div className="text-3xl">{step.icon}</div>
+                  </div>
+                  <div className="text-xs tracking-widest uppercase mb-2" style={{ color: step.color }}>Step {step.num}</div>
+                  <h3 className="text-xl font-bold text-white mb-3" style={{ fontFamily: "'Space Grotesk',sans-serif" }}>{step.title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{step.desc}</p>
+                </motion.div>
+              </div>
+              {/* Spacer for alternating layout */}
+              <div className="hidden md:block w-16 flex-shrink-0" />
+            </motion.div>
+          ))}
         </motion.div>
       </div>
     </section>
@@ -537,7 +541,7 @@ function HowSection() {
 function AgentShowcaseSection() {
   const { ref, inView } = useReveal();
   return (
-    <section id="agents-showcase" className="py-28 px-6">
+    <section id="agents-showcase" className="py-28" style={{ padding: "7rem clamp(1rem, 5vw, 3rem)" }}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#e879f9" }}>Agent Showcase</p>
@@ -603,7 +607,7 @@ function AgentShowcaseSection() {
 function PricingSection() {
   const { ref, inView } = useReveal();
   return (
-    <section id="pricing" className="py-28 px-6">
+    <section id="pricing" className="py-28" style={{ padding: "7rem clamp(1rem, 5vw, 3rem)" }}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-14">
           <p className="text-xs tracking-widest uppercase mb-4" style={{ color: "#f9a8d4" }}>Pricing</p>
@@ -672,7 +676,7 @@ function AgentRegisterSection() {
   };
 
   return (
-    <section id="register" className="py-28 px-6">
+    <section id="register" className="py-28" style={{ padding: "7rem clamp(1rem, 5vw, 3rem)" }}>
       <div className="max-w-3xl mx-auto">
         <motion.div ref={ref} variants={stagger} initial="hidden" animate={inView ? "visible" : "hidden"}>
           <motion.p variants={fadeUp} className="text-xs tracking-widest uppercase text-center mb-4" style={{ color: "#ff69b4" }}>Agent Registration</motion.p>
@@ -879,9 +883,14 @@ export default function HomePage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
         html { scroll-behavior: smooth; }
-        * { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: border-box; }
+        body { overflow-x: hidden; }
         input, textarea { font-family: 'Inter', sans-serif; }
         input::placeholder, textarea::placeholder { color: #4b5563; }
+        .flex-col.sm\:flex-row { flex-wrap: nowrap; }
+        @media (max-width: 639px) {
+          .flex-col.sm\:flex-row { flex-wrap: wrap; }
+        }
       `}</style>
     </div>
   );
