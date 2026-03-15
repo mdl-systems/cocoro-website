@@ -152,4 +152,6 @@ npm start
 | 2026-03-14 | LP全面刷新: ヒーロー(パーティクル)・特徴・仕組み(3Step)・エージェントショーケース(6種)・料金・インライン登録フォーム・ピンクアクセント統一 |
 | 2026-03-14 | LP動的要素追加: シンクロ率メーター・エージェントデモカード(ホバー)・3D miniPC(Canvas WebGL)・導入実績カウントアップ・ウェイトリスト(POST /api/waitlist) |
 | 2026-03-14 | 本番デプロイ準備: vercel.json・SEO(OGP/Twitter Card/JSON-LD/robots)・GA4・OGP画像・ページ別metadata・.env.example整理 |
+| 2026-03-15 | さくらサーバーデプロイ設定: standalone出力・ecosystem.config.js(PM2)・deploy.sh(rsync自動化)・nginx設定(HTTPS/SSE/静的配信) |
+
 
