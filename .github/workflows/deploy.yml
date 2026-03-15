@@ -40,15 +40,19 @@ jobs:
       - name: Place .htaccess
         run: cp scripts/.htaccess out/.htaccess
 
-      # ─── 6. SSH セットアップ（base64デコード版）────────────────────────
+      # ─── 6. SSH セットアップ ────────────────────────────────────────────
       # GitHub Secrets 登録方法:
       #   cat ~/.ssh/id_ed25519 | base64 | tr -d '\n'  → SAKURA_SSH_KEY_B64 に登録
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "${{ secrets.SAKURA_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/sakura_key
           chmod 600 ~/.ssh/sakura_key
-          ssh-keyscan -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts
+          ssh-keyscan -p 22 -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          # 鍵の検証
+          ssh-keygen -l -f ~/.ssh/sakura_key
 
       # ─── 7. SSH接続テスト ────────────────────────────────────────────────
       - name: Test SSH connection
