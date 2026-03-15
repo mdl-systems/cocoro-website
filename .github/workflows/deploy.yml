@@ -40,10 +40,12 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$SAKURA_SSH_PRIVATE_KEY" > ~/.ssh/sakura_actions
+          echo "$SAKURA_SSH_PRIVATE_KEY" > ~/.ssh/sakura_actions
           chmod 600 ~/.ssh/sakura_actions
           ssh-keyscan -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts
-          ssh-keygen -l -f ~/.ssh/sakura_actions
+          cat ~/.ssh/sakura_actions | head -3
+          wc -l ~/.ssh/sakura_actions
+
 
       - name: Ensure remote directory
         run: |
