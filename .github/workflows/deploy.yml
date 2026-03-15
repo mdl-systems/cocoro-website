@@ -34,22 +34,23 @@ jobs:
       - name: Place .htaccess
         run: cp scripts/.htaccess out/.htaccess
 
-      - name: Debug secrets
+      - name: Setup SSH
+        env:
+          SAKURA_SSH_PRIVATE_KEY: ${{ secrets.SAKURA_SSH_PRIVATE_KEY }}
         run: |
-          echo "SAKURA_SSH_PRIVATE_KEY exists: ${{ secrets.SAKURA_SSH_PRIVATE_KEY != '' }}"
-
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SAKURA_SSH_PRIVATE_KEY }}
-
-
-      - name: Add known hosts
-        run: ssh-keyscan -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SAKURA_SSH_PRIVATE_KEY" > ~/.ssh/sakura_actions
+          chmod 600 ~/.ssh/sakura_actions
+          ssh-keyscan -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts
+          ssh-keygen -l -f ~/.ssh/sakura_actions
 
       - name: Ensure remote directory
         run: |
-          ssh -o ConnectTimeout=30 mdl-japan@www3398.sakura.ne.jp \
+          ssh -i ~/.ssh/sakura_actions \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=30 \
+            mdl-japan@www3398.sakura.ne.jp \
             'mkdir -p ~/www/cocoro-os && echo "DIR_OK"'
 
       - name: Deploy via rsync
@@ -58,7 +59,7 @@ jobs:
         timeout-minutes: 10
         run: |
           rsync -avz --delete \
-            -e "ssh -o ConnectTimeout=30" \
+            -e "ssh -i ~/.ssh/sakura_actions -o StrictHostKeyChecking=no -o ConnectTimeout=30" \
             --exclude ".DS_Store" \
             out/ \
             mdl-japan@www3398.sakura.ne.jp:~/www/cocoro-os/
@@ -68,8 +69,15 @@ jobs:
         run: |
           echo "rsync failed, falling back to scp..."
           tar -czf /tmp/deploy.tar.gz -C out .
-          scp -o ConnectTimeout=30 /tmp/deploy.tar.gz mdl-japan@www3398.sakura.ne.jp:~/
-          ssh -o ConnectTimeout=30 mdl-japan@www3398.sakura.ne.jp \
+          scp -i ~/.ssh/sakura_actions \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=30 \
+            /tmp/deploy.tar.gz \
+            mdl-japan@www3398.sakura.ne.jp:~/
+          ssh -i ~/.ssh/sakura_actions \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=30 \
+            mdl-japan@www3398.sakura.ne.jp \
             'cd ~/www/cocoro-os && tar -xzf ~/deploy.tar.gz --overwrite && rm ~/deploy.tar.gz && echo "SCP_OK"'
 
       - name: Deployment summary
