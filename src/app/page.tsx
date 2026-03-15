@@ -884,13 +884,24 @@ export default function HomePage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
         html { scroll-behavior: smooth; }
         *, *::before, *::after { box-sizing: border-box; }
-        body { overflow-x: hidden; }
+        body { overflow-x: hidden; margin: 0; padding: 0; }
+        main { display: block !important; width: 100%; }
+
+        /* Tailwind v4のmargin-inline:autoをmargin:0 autoで上書き（確実な中央揃え） */
+        .mx-auto {
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        .max-w-xl  { max-width: 36rem;  width: 100%; }
+        .max-w-2xl { max-width: 42rem;  width: 100%; }
+        .max-w-3xl { max-width: 48rem;  width: 100%; }
+        .max-w-4xl { max-width: 56rem;  width: 100%; }
+        .max-w-5xl { max-width: 64rem;  width: 100%; }
+        .max-w-6xl { max-width: 72rem;  width: 100%; }
+        .max-w-xs  { max-width: 20rem;  width: 100%; }
+
         input, textarea { font-family: 'Inter', sans-serif; }
         input::placeholder, textarea::placeholder { color: #4b5563; }
-        .flex-col.sm\:flex-row { flex-wrap: nowrap; }
-        @media (max-width: 639px) {
-          .flex-col.sm\:flex-row { flex-wrap: wrap; }
-        }
       `}</style>
     </div>
   );
