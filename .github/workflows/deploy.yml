@@ -35,16 +35,13 @@ jobs:
         run: cp scripts/.htaccess out/.htaccess
 
       - name: Setup SSH
-        env:
-          SAKURA_SSH_PRIVATE_KEY: ${{ secrets.SAKURA_SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "$SAKURA_SSH_PRIVATE_KEY" > ~/.ssh/sakura_actions
+          echo "${{ secrets.SAKURA_ACTIONS_B64 }}" | base64 -d > ~/.ssh/sakura_actions
           chmod 600 ~/.ssh/sakura_actions
           ssh-keyscan -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts
-          cat ~/.ssh/sakura_actions | head -3
-          wc -l ~/.ssh/sakura_actions
+          ssh-keygen -l -f ~/.ssh/sakura_actions
 
 
       - name: Ensure remote directory
