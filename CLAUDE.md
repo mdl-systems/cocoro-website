@@ -156,6 +156,8 @@ npm start
 | 2026-03-15 | 静的エクスポート対応(FreeBSD/Apache): output:export・APIルート退避(_api_server/)・AppShell/Chat/Feed静的化・.htaccess・deploy-sakura.sh |
 | 2026-03-15 | scripts/deploy-sakura.sh: mdl-japan@www3398.sakura.ne.jp への正式デプロイスクリプト(ビルド→.htaccess生成→rsync) |
 | 2026-03-15 | デプロイ設定完成: package.json deployスクリプト・scripts/.htaccess・out/.htaccess(SPA routing)・rsync(~/.ssh/sakura_key使用) |
+| 2026-03-15 | cocoro-sdk v1.1.0: GitHub Releases URL参照・cocoro.ts復元・GitHub Actions(deploy.yml)自動デプロイ実装 |
+
 
 
 

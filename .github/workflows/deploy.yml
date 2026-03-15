@@ -1,0 +1,73 @@
+name: Deploy to Sakura
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ─── 1. チェックアウト ──────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ─── 2. Node.js セットアップ ────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ─── 3. 依存関係インストール ─────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ─── 4. 静的ビルド ───────────────────────────────────────────────────
+      - name: Build static export
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://cocoro-os.com
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_TELEMETRY_DISABLED: 1
+
+      # ─── 5. .htaccess 配置 ───────────────────────────────────────────────
+      - name: Place .htaccess
+        run: cp scripts/.htaccess out/.htaccess
+
+      # ─── 6. SSH秘密鍵セットアップ ───────────────────────────────────────
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SAKURA_SSH_KEY }}" > ~/.ssh/sakura_key
+          chmod 600 ~/.ssh/sakura_key
+          ssh-keyscan -H www3398.sakura.ne.jp >> ~/.ssh/known_hosts 2>/dev/null
+
+      # ─── 7. リモートディレクトリ作成 ────────────────────────────────────
+      - name: Ensure remote directory
+        run: |
+          ssh -i ~/.ssh/sakura_key \
+            -o StrictHostKeyChecking=no \
+            mdl-japan@www3398.sakura.ne.jp \
+            'mkdir -p ~/www/cocoro-os'
+
+      # ─── 8. rsync デプロイ ───────────────────────────────────────────────
+      - name: Deploy via rsync
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/sakura_key -o StrictHostKeyChecking=no" \
+            --exclude ".DS_Store" \
+            out/ \
+            mdl-japan@www3398.sakura.ne.jp:~/www/cocoro-os/
+
+      # ─── 9. デプロイ完了通知 ────────────────────────────────────────────
+      - name: Deployment summary
+        run: |
+          echo "✦ Deployed to https://cocoro-os.com"
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Branch: ${{ github.ref_name }}"

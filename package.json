@@ -12,6 +12,7 @@
   },
 
   "dependencies": {
+    "@mdl-systems/cocoro-sdk": "https://github.com/mdl-systems/cocoro-sdk/releases/download/v1.1.0/mdl-systems-cocoro-sdk-1.1.0.tgz",
     "@prisma/client": "^7.4.2",
 
     "@types/pg": "^8.18.0",
