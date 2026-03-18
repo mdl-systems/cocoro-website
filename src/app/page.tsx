@@ -377,10 +377,10 @@ function NavBar() {
       </div>
       <div className="flex items-center gap-3">
         <Link href="/login" className="text-sm text-gray-400 hover:text-white transition-colors">ログイン</Link>
-        <a href="#register" className="text-sm font-medium px-4 py-2 rounded-lg transition-all"
+        <Link href="/order" className="text-sm font-medium px-4 py-2 rounded-lg transition-all"
           style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 0 16px rgba(255,105,180,0.35)" }}>
-          始める
-        </a>
+          今すぐ購入
+        </Link>
       </div>
     </motion.nav>
   );
@@ -414,10 +414,10 @@ function HeroSection() {
         </motion.p>
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.45 }}
           className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="#register" className="px-8 py-4 rounded-xl font-semibold text-white text-base transition-all hover:-translate-y-0.5"
+          <Link href="/order" className="px-8 py-4 rounded-xl font-semibold text-white text-base transition-all hover:-translate-y-0.5"
             style={{ background: "linear-gradient(135deg,#ff69b4,#c084fc)", boxShadow: "0 4px 28px rgba(255,105,180,0.4)" }}>
             今すぐ始める ✦
-          </a>
+          </Link>
           <a href="#how" className="px-8 py-4 rounded-xl font-semibold text-gray-300 text-base border border-white/10 hover:border-pink-500/30 hover:text-white transition-all">
             デモを見る →
           </a>
@@ -638,10 +638,19 @@ function PricingSection() {
                   </li>
                 ))}
               </ul>
-              <button className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:-translate-y-0.5"
-                style={{ background: plan.badge ? `linear-gradient(135deg,${plan.color},#c084fc)` : "rgba(255,255,255,0.06)", color: plan.badge ? "#fff" : "#ccc", border: plan.badge ? "none" : "1px solid rgba(255,255,255,0.1)", boxShadow: plan.badge ? `0 4px 20px ${plan.glow}` : "none" }}>
-                {plan.cta}
-              </button>
+              {plan.name === "Enterprise" ? (
+                <a href="mailto:support@cocoro-os.com"
+                  className="block w-full py-3 rounded-xl font-semibold text-sm text-center transition-all hover:-translate-y-0.5"
+                  style={{ background: "rgba(255,255,255,0.06)", color: "#ccc", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  {plan.cta}
+                </a>
+              ) : (
+                <Link href={`/order?plan=${plan.name.toLowerCase()}`}
+                  className="block w-full py-3 rounded-xl font-semibold text-sm text-center transition-all hover:-translate-y-0.5"
+                  style={{ background: plan.badge ? `linear-gradient(135deg,${plan.color},#c084fc)` : "rgba(255,255,255,0.06)", color: plan.badge ? "#fff" : "#ccc", border: plan.badge ? "none" : "1px solid rgba(255,255,255,0.1)", boxShadow: plan.badge ? `0 4px 20px ${plan.glow}` : "none" }}>
+                  {plan.cta}
+                </Link>
+              )}
             </motion.div>
           ))}
         </motion.div>
